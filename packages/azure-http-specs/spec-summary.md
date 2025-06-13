@@ -1265,6 +1265,70 @@ Expected response body:
 }
 ```
 
+### Azure_ResourceManager_Legacy_OptionalBody_OptionalBodies_get
+
+- Endpoint: `get https://management.azure.com`
+
+OptionalBody GET operation.
+Expected path: /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Azure.ResourceManager.Legacy.OptionalBody/optionalBodies/sample-resource
+Expected query parameter: api-version=2025-01-01-preview
+
+Expected response body:
+
+```json
+{
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Azure.ResourceManager.Legacy.OptionalBody/optionalBodies/sample-resource",
+  "name": "sample-resource",
+  "type": "Azure.ResourceManager.Legacy.OptionalBody/optionalBodies",
+  "location": "eastus",
+  "properties": {
+    "totalItems": 100,
+    "description": "A sample resource for testing optional body operations",
+    "provisioningState": "Succeeded"
+  },
+  "systemData": {
+    "createdBy": "AzureSDK",
+    "createdByType": "User",
+    "createdAt": <any date>,
+    "lastModifiedBy": "AzureSDK",
+    "lastModifiedAt": <any date>,
+    "lastModifiedByType": "User"
+  }
+}
+```
+
+### Azure_ResourceManager_Legacy_OptionalBody_OptionalBodies_update
+
+- Endpoint: `patch https://management.azure.com`
+
+OptionalBody PATCH operation with optional body. This operation accepts an empty request body.
+Expected path: /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Azure.ResourceManager.Legacy.OptionalBody/optionalBodies/sample-resource
+Expected query parameter: api-version=2025-01-01-preview
+Expected request body.
+Expected response body:
+
+```json
+{
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Azure.ResourceManager.Legacy.OptionalBody/optionalBodies/sample-resource",
+  "name": "sample-resource",
+  "type": "Azure.ResourceManager.Legacy.OptionalBody/optionalBodies",
+  "location": "eastus",
+  "properties": {
+    "totalItems": 100,
+    "description": "Updated description for the sample resource",
+    "provisioningState": "Succeeded"
+  },
+  "systemData": {
+    "createdBy": "AzureSDK",
+    "createdByType": "User",
+    "createdAt": <any date>,
+    "lastModifiedBy": "AzureSDK",
+    "lastModifiedAt": <any date>,
+    "lastModifiedByType": "User"
+  }
+}
+```
+
 ### Azure_ResourceManager_NonResource_NonResourceOperations_create
 
 - Endpoint: `put https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.NonResource/locations/{location}/otherParameters/{parameter}`

@@ -27,7 +27,7 @@ model OptionalBodyProperties {
 
 @resource("optionalBodies")
 model OptionalBody is TrackedResource<OptionalBodyProperties> {
-  @key("optionalBodyName")
+  @key("name")
   @path
   @segment("optionalBodies")
   @doc("The name of the OptionalBody resource")

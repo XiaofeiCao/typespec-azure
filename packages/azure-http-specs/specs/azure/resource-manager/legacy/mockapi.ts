@@ -27,13 +27,13 @@ const validOptionalBodyResource = {
 
 // OptionalBody GET operation
 Scenarios.Azure_ResourceManager_Legacy_OptionalBody_OptionalBodies_get = passOnSuccess({
-  uri: "/subscriptions/:subscriptionId/resourceGroups/:resourceGroup/providers/Azure.ResourceManager.Legacy.OptionalBody/optionalBodies/:optionalBodyName",
+  uri: "/subscriptions/:subscriptionId/resourceGroups/:resourceGroup/providers/Azure.ResourceManager.Legacy.OptionalBody/optionalBodies/:name",
   method: "get",
   request: {
     pathParams: {
       subscriptionId: SUBSCRIPTION_ID_EXPECTED,
       resourceGroup: RESOURCE_GROUP_EXPECTED,
-      optionalBodyName: "sample-resource",
+      name: "sample-resource",
     },
     query: {
       "api-version": "2025-01-01-preview",
@@ -50,13 +50,13 @@ Scenarios.Azure_ResourceManager_Legacy_OptionalBody_OptionalBodies_get = passOnS
 Scenarios.Azure_ResourceManager_Legacy_OptionalBody_OptionalBodies_update = passOnSuccess([
   {
     // Test with empty body
-    uri: "/subscriptions/:subscriptionId/resourceGroups/:resourceGroup/providers/Azure.ResourceManager.Legacy.OptionalBody/optionalBodies/:optionalBodyName",
+    uri: "/subscriptions/:subscriptionId/resourceGroups/:resourceGroup/providers/Azure.ResourceManager.Legacy.OptionalBody/optionalBodies/:name",
     method: "patch",
     request: {
       pathParams: {
         subscriptionId: SUBSCRIPTION_ID_EXPECTED,
         resourceGroup: RESOURCE_GROUP_EXPECTED,
-        optionalBodyName: "sample-resource",
+        name: "sample-resource",
       },
       query: {
         "api-version": "2025-01-01-preview",
