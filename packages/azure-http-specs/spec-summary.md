@@ -3587,6 +3587,75 @@ Expected response body (with body scenario):
 }
 ```
 
+### Azure_ResourceManager_ProviderAction_AsyncAction_exportData
+
+- Endpoint: `post https://management.azure.com`
+
+Provider action using ArmProviderActionAsync at subscription scope.
+Long-running POST action that exports data.
+Service returns Location header on initial request.
+
+Expected verb: POST
+Expected path: /subscriptions/00000000-0000-0000-0000-000000000000/providers/Azure.ResourceManager.ProviderAction/exportData
+Expected query parameter: api-version=2023-12-01-preview
+Expected request body:
+
+```json
+{
+  "format": "json"
+}
+```
+
+Expected response status code: 202
+Expected response header: Location={endpoint}/subscriptions/00000000-0000-0000-0000-000000000000/providers/Azure.ResourceManager.ProviderAction/locations/eastus/operationResults/export_op
+Expected no response body
+
+Location first poll.
+Expected verb: GET
+Expected URL: {endpoint}/subscriptions/00000000-0000-0000-0000-000000000000/providers/Azure.ResourceManager.ProviderAction/locations/eastus/operationResults/export_op
+Expected status code: 202
+Expected no response body
+
+Location second poll.
+Expected verb: GET
+Expected URL: {endpoint}/subscriptions/00000000-0000-0000-0000-000000000000/providers/Azure.ResourceManager.ProviderAction/locations/eastus/operationResults/export_op
+Expected status code: 200
+Expected response body:
+
+```json
+{
+  "content": "exported data in json format"
+}
+```
+
+### Azure_ResourceManager_ProviderAction_SyncAction_validateResource
+
+- Endpoint: `post https://management.azure.com`
+
+Provider action using ArmProviderActionSync at subscription scope.
+Synchronous POST action that validates a resource.
+
+Expected verb: POST
+Expected path: /subscriptions/00000000-0000-0000-0000-000000000000/providers/Azure.ResourceManager.ProviderAction/validateResource
+Expected query parameter: api-version=2023-12-01-preview
+Expected request body:
+
+```json
+{
+  "resourceType": "Microsoft.Compute/virtualMachines",
+  "resourceName": "myVM"
+}
+```
+
+Expected status code: 200
+Expected response body:
+
+```json
+{
+  "isValid": true
+}
+```
+
 ### Azure_ResourceManager_Resources_ExtensionsResources_createOrUpdate
 
 - Endpoint: `put https://management.azure.com`
