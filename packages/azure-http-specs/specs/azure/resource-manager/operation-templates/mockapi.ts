@@ -381,6 +381,119 @@ Scenarios.Azure_ResourceManager_OperationTemplates_Lro_export = passOnSuccess([
   },
 ]);
 
+let exportBinaryPollCount = 0;
+
+Scenarios.Azure_ResourceManager_OperationTemplates_Lro_exportBinary = passOnSuccess([
+  {
+    // LRO POST initial request - exportBinary
+    uri: "/subscriptions/:subscriptionId/resourceGroups/:resourceGroup/providers/Azure.ResourceManager.OperationTemplates/orders/:orderName/exportBinary",
+    method: "post",
+    request: {
+      pathParams: {
+        subscriptionId: SUBSCRIPTION_ID_EXPECTED,
+        resourceGroup: RESOURCE_GROUP_EXPECTED,
+        orderName: "order1",
+      },
+      query: {
+        "api-version": "2023-12-01-preview",
+      },
+      body: json({
+        sourceId: "source1",
+      }),
+    },
+    response: {
+      status: 202,
+      headers: {
+        location: dyn`${dynItem("baseUrl")}/subscriptions/${SUBSCRIPTION_ID_EXPECTED}/providers/Azure.ResourceManager.OperationTemplates/locations/eastus/operations/lro_post_binary_location`,
+        "azure-asyncoperation": dyn`${dynItem("baseUrl")}/subscriptions/${SUBSCRIPTION_ID_EXPECTED}/providers/Azure.ResourceManager.OperationTemplates/locations/eastus/operations/lro_post_binary_aao`,
+      },
+    },
+    handler: (req: MockRequest) => {
+      exportBinaryPollCount = 0;
+      return {
+        status: 202,
+        headers: {
+          location: `${req.baseUrl}/subscriptions/${SUBSCRIPTION_ID_EXPECTED}/providers/Azure.ResourceManager.OperationTemplates/locations/eastus/operations/lro_post_binary_location`,
+          "azure-asyncoperation": `${req.baseUrl}/subscriptions/${SUBSCRIPTION_ID_EXPECTED}/providers/Azure.ResourceManager.OperationTemplates/locations/eastus/operations/lro_post_binary_aao`,
+        },
+      };
+    },
+    kind: "MockApiDefinition",
+  },
+  {
+    // LRO POST poll intermediate/get final result - Location Header (returns bytes)
+    uri: "/subscriptions/:subscriptionId/providers/Azure.ResourceManager.OperationTemplates/locations/eastus/operations/lro_post_binary_location",
+    method: "get",
+    request: {
+      pathParams: {
+        subscriptionId: SUBSCRIPTION_ID_EXPECTED,
+      },
+      query: {
+        "api-version": "2023-12-01-preview",
+      },
+    },
+    response: {
+      status: 200,
+    },
+    handler: (req: MockRequest) => {
+      const response =
+        exportBinaryPollCount > 0
+          ? {
+              status: 200,
+              body: {
+                contentType: "application/octet-stream",
+                rawContent: Buffer.from("export binary data"),
+              },
+            }
+          : { status: 202 };
+
+      exportBinaryPollCount += 1;
+      return response;
+    },
+    kind: "MockApiDefinition",
+  },
+  {
+    // LRO POST poll intermediate/get final result - Azure-AsyncOperation Header
+    uri: "/subscriptions/:subscriptionId/providers/Azure.ResourceManager.OperationTemplates/locations/eastus/operations/lro_post_binary_aao",
+    method: "get",
+    request: {
+      pathParams: {
+        subscriptionId: SUBSCRIPTION_ID_EXPECTED,
+      },
+      query: {
+        "api-version": "2023-12-01-preview",
+      },
+    },
+    response: {
+      status: 200,
+    },
+    handler: (req: MockRequest) => {
+      const aaoResponse = {
+        id: `/subscriptions/${SUBSCRIPTION_ID_EXPECTED}/providers/Azure.ResourceManager.OperationTemplates/locations/eastus/operations/lro_post_binary_aao`,
+        name: "lro_post_binary_aao",
+        startTime: "2024-11-08T01:41:53.5508583+00:00",
+      };
+      const responseBody =
+        exportBinaryPollCount > 0
+          ? {
+              ...aaoResponse,
+              status: "Succeeded",
+              endTime: "2024-11-08T01:42:41.5354192+00:00",
+            }
+          : { ...aaoResponse, status: "InProgress" };
+
+      const response = {
+        status: 200,
+        body: json(responseBody),
+      };
+
+      exportBinaryPollCount += 1;
+      return response;
+    },
+    kind: "MockApiDefinition",
+  },
+]);
+
 Scenarios.Azure_ResourceManager_OperationTemplates_Lro_delete = passOnSuccess([
   {
     // LRO DELETE initial request
