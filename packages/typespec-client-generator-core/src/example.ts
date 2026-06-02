@@ -3,13 +3,14 @@ import {
   Diagnostic,
   DiagnosticCollector,
   NoTarget,
-  Operation,
+  Program,
   createDiagnosticCollector,
-  isGlobalNamespace,
-  isService,
+  getAnyExtensionFromPath,
+  getRelativePathFromDirectory,
+  joinPaths,
+  normalizePath,
   resolvePath,
 } from "@typespec/compiler";
-import { getOperationId } from "@typespec/openapi";
 import {
   SdkArrayExampleValue,
   SdkArrayType,
@@ -30,11 +31,12 @@ import {
   SdkServiceOperation,
   SdkType,
   TCGCContext,
+  isSdkFixedPointKind,
   isSdkFloatKind,
   isSdkIntKind,
 } from "./interfaces.js";
 import { createDiagnostic } from "./lib.js";
-import { getLibraryName } from "./public-utils.js";
+import { resolveOperationId } from "./public-utils.js";
 
 interface LoadedExample {
   readonly relativePath: string;
@@ -53,112 +55,146 @@ async function checkExamplesDirExists(host: CompilerHost, dir: string) {
  * Load all examples for a client
  *
  * @param context
- * @param apiVersion
  * @returns a map of all operations' examples, key is operation's operation id,
  * value is a map of examples, key is example's title, value is example's details
  */
 async function loadExamples(
   context: TCGCContext,
-  apiVersion: string | undefined,
 ): Promise<[Map<string, Record<string, LoadedExample>>, readonly Diagnostic[]]> {
   const diagnostics = createDiagnosticCollector();
-  const examplesBaseDir =
-    context.examplesDir ?? resolvePath(context.program.projectRoot, "examples");
 
-  const exampleDir = apiVersion
-    ? resolvePath(examplesBaseDir, apiVersion)
-    : resolvePath(examplesBaseDir);
-  if (!(await checkExamplesDirExists(context.program.host, exampleDir))) {
-    if (context.examplesDir) {
-      diagnostics.add(
-        createDiagnostic({
-          code: "example-loading",
-          messageId: "noDirectory",
-          format: { directory: exampleDir },
-          target: NoTarget,
-        }),
-      );
-    }
-    return diagnostics.wrap(new Map());
-  }
-
-  const map = new Map<string, Record<string, LoadedExample>>();
-  const exampleFiles = await context.program.host.readDir(exampleDir);
-  for (const fileName of exampleFiles) {
-    try {
-      const exampleFile = await context.program.host.readFile(resolvePath(exampleDir, fileName));
-      const example = JSON.parse(exampleFile.text);
-      if (!example.operationId || !example.title) {
+  const apiVersions = context.getPackageVersions();
+  const exampleDirs: string[][] = [];
+  if (apiVersions.size <= 1) {
+    // single service case
+    const apiVersion =
+      apiVersions.size === 1 ? apiVersions.values().next().value?.at(-1) : undefined;
+    const examplesBaseDir = resolvePath(
+      context.program.projectRoot,
+      context.examplesDir ?? "./examples",
+    );
+    const exampleDir = apiVersion
+      ? resolvePath(examplesBaseDir, apiVersion)
+      : resolvePath(examplesBaseDir);
+    if (!(await checkExamplesDirExists(context.program.host, exampleDir))) {
+      if (context.examplesDir) {
         diagnostics.add(
           createDiagnostic({
             code: "example-loading",
-            messageId: "noOperationId",
-            format: { filename: fileName },
+            messageId: "noDirectory",
+            format: { directory: exampleDir },
             target: NoTarget,
           }),
         );
-        continue;
       }
+      return diagnostics.wrap(new Map());
+    }
+    exampleDirs.push([exampleDir, examplesBaseDir]);
+  } else {
+    // multiple services case, we need to load examples from sub service folders
+    for (const [service, versions] of apiVersions) {
+      const apiVersion = versions.length > 0 ? versions[versions.length - 1] : undefined;
+      const examplesBaseDir = resolvePath(
+        context.program.projectRoot,
+        service.name,
+        context.examplesDir ?? "./examples",
+      );
+      const exampleDir = apiVersion
+        ? resolvePath(examplesBaseDir, apiVersion)
+        : resolvePath(examplesBaseDir);
 
-      if (!map.has(example.operationId.toLowerCase())) {
-        map.set(example.operationId.toLowerCase(), {});
+      if (await checkExamplesDirExists(context.program.host, exampleDir)) {
+        exampleDirs.push([exampleDir, examplesBaseDir]);
       }
-      const examples = map.get(example.operationId.toLowerCase())!;
+    }
+  }
 
-      if (example.title in examples) {
+  const map = new Map<string, Record<string, LoadedExample>>();
+  for (const [exampleDir, examplesBaseDir] of exampleDirs) {
+    const exampleFiles = await searchExampleJsonFiles(context.program, exampleDir);
+    for (const fileName of exampleFiles) {
+      try {
+        const exampleFile = await context.program.host.readFile(resolvePath(exampleDir, fileName));
+        const example = JSON.parse(exampleFile.text);
+        if (!example.operationId || !example.title) {
+          diagnostics.add(
+            createDiagnostic({
+              code: "example-loading",
+              messageId: "noOperationId",
+              format: { filename: fileName },
+              target: NoTarget,
+            }),
+          );
+          continue;
+        }
+
+        if (!map.has(example.operationId.toLowerCase())) {
+          map.set(example.operationId.toLowerCase(), {});
+        }
+        const examples = map.get(example.operationId.toLowerCase())!;
+
+        if (example.title in examples) {
+          diagnostics.add(
+            createDiagnostic({
+              code: "duplicate-example-file",
+              target: NoTarget,
+              format: {
+                filename: fileName,
+                operationId: example.operationId,
+                title: example.title,
+              },
+            }),
+          );
+        }
+
+        examples[example.title] = {
+          relativePath: getRelativePathFromDirectory(
+            examplesBaseDir,
+            resolvePath(exampleDir, fileName),
+            false,
+          ),
+          data: example,
+        };
+      } catch (err) {
         diagnostics.add(
           createDiagnostic({
-            code: "duplicate-example-file",
+            code: "example-loading",
+            messageId: "default",
+            format: { filename: fileName, error: err?.toString() ?? "" },
             target: NoTarget,
-            format: {
-              filename: fileName,
-              operationId: example.operationId,
-              title: example.title,
-            },
           }),
         );
       }
-
-      examples[example.title] = {
-        relativePath: apiVersion ? resolvePath(apiVersion, fileName) : fileName,
-        data: example,
-      };
-    } catch (err) {
-      diagnostics.add(
-        createDiagnostic({
-          code: "example-loading",
-          messageId: "default",
-          format: { filename: fileName, error: err?.toString() ?? "" },
-          target: NoTarget,
-        }),
-      );
     }
   }
   return diagnostics.wrap(map);
 }
 
-function resolveOperationId(context: TCGCContext, operation: Operation, honorRenaming: boolean) {
-  const { program } = context;
-  // if @operationId was specified use that value
-  const explicitOperationId = getOperationId(program, operation);
-  if (explicitOperationId) {
-    return explicitOperationId;
+async function searchExampleJsonFiles(program: Program, exampleDir: string): Promise<string[]> {
+  const host = program.host;
+  const exampleFiles: string[] = [];
+
+  // Recursive file search
+  async function recursiveSearch(dir: string): Promise<void> {
+    const fileItems = await host.readDir(dir);
+
+    for (const item of fileItems) {
+      const fullPath = joinPaths(dir, item);
+      const relativePath = getRelativePathFromDirectory(exampleDir, fullPath, false);
+
+      if ((await host.stat(fullPath)).isDirectory()) {
+        await recursiveSearch(fullPath);
+      } else if (
+        (await host.stat(fullPath)).isFile() &&
+        getAnyExtensionFromPath(item) === ".json"
+      ) {
+        exampleFiles.push(normalizePath(relativePath));
+      }
+    }
   }
 
-  const operationName = honorRenaming ? getLibraryName(context, operation) : operation.name;
-  if (operation.interface) {
-    return `${honorRenaming ? getLibraryName(context, operation.interface) : operation.interface.name}_${operationName}`;
-  }
-  const namespace = operation.namespace;
-  if (
-    namespace === undefined ||
-    isGlobalNamespace(program, namespace) ||
-    isService(program, namespace)
-  ) {
-    return operationName;
-  }
-
-  return `${honorRenaming ? getLibraryName(context, namespace) : namespace.name}_${operationName}`;
+  await recursiveSearch(exampleDir);
+  return exampleFiles;
 }
 
 export async function handleClientExamples(
@@ -167,10 +203,7 @@ export async function handleClientExamples(
 ): Promise<[void, readonly Diagnostic[]]> {
   const diagnostics = createDiagnosticCollector();
 
-  const packageVersions = context.getPackageVersions();
-  const examples = diagnostics.pipe(
-    await loadExamples(context, packageVersions[packageVersions.length - 1]),
-  );
+  const examples = diagnostics.pipe(await loadExamples(context));
   const clientQueue = [client];
   while (clientQueue.length > 0) {
     const client = clientQueue.pop()!;
@@ -178,9 +211,9 @@ export async function handleClientExamples(
       clientQueue.push(...client.children);
     }
     for (const method of client.methods) {
-      // since operation could have customization in client.tsp, we need to handle all the original operation (exclude the templated operation)
+      // since operation could have customization in client.tsp, we need to handle all the original operation
       let operation = method.__raw;
-      while (operation && operation.templateMapper === undefined) {
+      while (operation) {
         // try operation id with renaming
         let operationId = resolveOperationId(context, operation, true).toLowerCase();
         if (examples.has(operationId)) {
@@ -404,7 +437,7 @@ function handleHttpResponse(
 }
 
 function getSdkTypeExample(
-  type: SdkType | SdkModelPropertyType,
+  type: SdkType,
   example: any,
   relativePath: string,
 ): [SdkExampleValue | undefined, readonly Diagnostic[]] {
@@ -414,7 +447,7 @@ function getSdkTypeExample(
     return diagnostics.wrap(undefined);
   }
 
-  if (isSdkIntKind(type.kind) || isSdkFloatKind(type.kind)) {
+  if (isSdkIntKind(type.kind) || isSdkFloatKind(type.kind) || isSdkFixedPointKind(type.kind)) {
     return getSdkBaseTypeExample("number", type as SdkType, example, relativePath);
   } else {
     switch (type.kind) {
@@ -504,6 +537,42 @@ function getSdkTypeExample(
   return diagnostics.wrap(undefined);
 }
 
+/**
+ * Attempts to convert a string value to a number.
+ * Returns the converted number if valid, undefined otherwise.
+ */
+function tryConvertStringToNumber(value: string): number | undefined {
+  if (typeof value !== "string" || value.trim() === "") {
+    return undefined;
+  }
+
+  const num = Number(value.trim());
+  if (isNaN(num) || !isFinite(num)) {
+    return undefined;
+  }
+
+  return num;
+}
+
+/**
+ * Attempts to convert a string value to a boolean.
+ * Returns the converted boolean if valid, undefined otherwise.
+ */
+function tryConvertStringToBoolean(value: string): boolean | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const lowerValue = value.toLowerCase().trim();
+  if (lowerValue === "true") {
+    return true;
+  } else if (lowerValue === "false") {
+    return false;
+  }
+
+  return undefined;
+}
+
 function getSdkBaseTypeExample(
   kind: "string" | "number" | "boolean",
   type: SdkType,
@@ -511,15 +580,41 @@ function getSdkBaseTypeExample(
   relativePath: string,
 ): [SdkExampleValue | undefined, readonly Diagnostic[]] {
   const diagnostics = createDiagnosticCollector();
+
+  // Direct type match - use as is
   if (typeof example === kind) {
     return diagnostics.wrap({
       kind,
       type,
       value: example,
     } as SdkExampleValue);
-  } else {
-    addExampleValueNoMappingDignostic(diagnostics, example, relativePath);
   }
+
+  // Try string conversion for number and boolean types
+  if (typeof example === "string") {
+    if (kind === "number") {
+      const convertedNumber = tryConvertStringToNumber(example);
+      if (convertedNumber !== undefined) {
+        return diagnostics.wrap({
+          kind,
+          type,
+          value: convertedNumber,
+        } as SdkExampleValue);
+      }
+    } else if (kind === "boolean") {
+      const convertedBoolean = tryConvertStringToBoolean(example);
+      if (convertedBoolean !== undefined) {
+        return diagnostics.wrap({
+          kind,
+          type,
+          value: convertedBoolean,
+        } as SdkExampleValue);
+      }
+    }
+  }
+
+  // If no conversion was possible, add diagnostic
+  addExampleValueNoMappingDignostic(diagnostics, example, relativePath);
   return diagnostics.wrap(undefined);
 }
 

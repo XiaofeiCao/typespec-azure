@@ -4,6 +4,7 @@ import {
   Operation,
   Program,
   createRule,
+  isTemplateInstance,
   paramMessage,
 } from "@typespec/compiler";
 import { SyntaxKind } from "@typespec/compiler/ast";
@@ -12,7 +13,6 @@ import { getSegment } from "@typespec/rest";
 import {
   getNamespaceName,
   getSourceModel,
-  isInternalTypeSpec,
   isSourceOperationResourceManagerInternal,
   isTemplatedInterfaceOperation,
 } from "./utils.js";
@@ -21,6 +21,7 @@ export const coreOperationsRule = createRule({
   name: "arm-resource-operation",
   severity: "warning",
   description: "Validate ARM Resource operations.",
+  url: "https://azure.github.io/typespec-azure/docs/libraries/azure-resource-manager/rules/arm-resource-operation",
   messages: {
     default:
       "All Resource operations must use an api-version parameter. Please include Azure.ResourceManager.ApiVersionParameter in the operation parameter list using the spread (...ApiVersionParameter) operator, or using one of the common resource parameter models.",
@@ -31,8 +32,8 @@ export const coreOperationsRule = createRule({
     return {
       operation: (operation: Operation) => {
         if (
-          !isInternalTypeSpec(context.program, operation) &&
-          !isSourceOperationResourceManagerInternal(operation)
+          !isSourceOperationResourceManagerInternal(operation) &&
+          !isTemplateInstance(operation)
         ) {
           const verb = getOperationVerb(context.program, operation);
           if (

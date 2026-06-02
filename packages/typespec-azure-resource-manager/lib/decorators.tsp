@@ -79,8 +79,9 @@ extern dec subscriptionResource(target: Model);
 /**
  * `@locationResource` marks an Azure Resource Manager resource model as a location based resource.
  *
- * Location based resources have REST API paths like
- *   `/subscriptions/{subscriptionId}/locations/{location}/providers/Microsoft.Contoso/employees`
+ * **Deprecated**: This decorator is deprecated. Use `@parentResource` with `ArmLocationResource` instead.
+ * See the [Location Resource sample](https://azure.github.io/typespec-azure/docs/samples/resource-manager/resource-types/location/)
+ * for the recommended approach.
  *
  * See more details on [different Azure Resource Manager resource type here.](https://azure.github.io/typespec-azure/docs/howtos/ARM/resource-type)
  */
@@ -121,47 +122,112 @@ extern dec armProviderNameValue(target: Operation);
 extern dec armResourceCollectionAction(target: Operation);
 
 /**
- * @param resourceType Resource model
+ * @param resourceModel Resource model
+ * @param resourceName Optional. The name of the resource. If not provided, the name of the resource model will be used.
  */
-extern dec armResourceAction(target: Operation, resourceType: Model);
+extern dec armResourceAction(
+  target: Operation,
+  resourceModel: Model,
+  resourceName?: valueof string
+);
 
 /**
- * @param resourceType Resource model
+ * @param resourceModel Resource model
+ * @param resourceName Optional. The name of the resource. If not provided, the name of the resource model will be used.
  */
-extern dec armResourceCreateOrUpdate(target: Operation, resourceType: Model);
+extern dec armResourceCreateOrUpdate(
+  target: Operation,
+  resourceModel: Model,
+  resourceName?: valueof string
+);
 
 /**
- * @param resourceType Resource model
+ * @param resourceModel Resource model
+ * @param resourceName Optional. The name of the resource. If not provided, the name of the resource model will be used.
  */
-extern dec armResourceRead(target: Operation, resourceType: Model);
+extern dec armResourceRead(target: Operation, resourceModel: Model, resourceName?: valueof string);
 
 /**
- * @param resourceType Resource model
+ * @param resourceModel Resource model
+ * @param resourceName Optional. The name of the resource. If not provided, the name of the resource model will be used.
  */
-extern dec armResourceUpdate(target: Operation, resourceType: Model);
+extern dec armResourceUpdate(
+  target: Operation,
+  resourceModel: Model,
+  resourceName?: valueof string
+);
 
 /**
- * @param resourceType Resource model
+ * @param resourceModel Resource model
+ * @param resourceName Optional. The name of the resource. If not provided, the name of the resource model will be used.
  */
-extern dec armResourceDelete(target: Operation, resourceType: Model);
+extern dec armResourceDelete(
+  target: Operation,
+  resourceModel: Model,
+  resourceName?: valueof string
+);
 
 /**
- * @param resourceType Resource model
+ * @param resourceModel Resource model
+ * @param resourceName Optional. The name of the resource. If not provided, the name of the resource model will be used.
  */
-extern dec armResourceList(target: Operation, resourceType: Model);
+extern dec armResourceList(target: Operation, resourceModel: Model, resourceName?: valueof string);
+
+/**
+ * Marks the operation as being a check existence (HEAD) operation
+ * @param resourceModel Resource model
+ * @param resourceName Optional. The name of the resource. If not provided, the name of the resource model will be used.
+ */
+extern dec armResourceCheckExistence(
+  target: Operation,
+  resourceModel: Model,
+  resourceName?: valueof string
+);
 
 /**
  * This decorator is used to identify interfaces containing resource operations.
- * When applied, it marks the interface with the `@autoRoute` decorator so that
+ * By default, it marks the interface with the `@autoRoute` decorator so that
  * all of its contained operations will have their routes generated
  * automatically.
  *
- * It also adds a `@tag` decorator bearing the name of the interface so that all
+ * The decorator also adds a `@tag` decorator bearing the name of the interface so that all
  * of the operations will be grouped based on the interface name in generated
  * clients.
- * @param _ DEPRECATED
+ *
+ * The optional `resourceOperationOptions` parameter provides additional options.
+ * `allowStaticRoutes` turns off autoRout for the interface, so individual operations can
+ * choose static (`@route`) or automatic (`@autoRoute`) routing.
+ *
+ * `resourceType: Model` specifies the resource type for the operations in the interface
+ *
+ * `omitTags: true`: turns off the default tagging of operations in the interface, so that individual operations must be
+ * individually tagged
+ *
+ *
+ * @param resourceOperationOptions Options for routing the operations in the interface and associating them with a specific resource
  */
-extern dec armResourceOperations(target: Interface, _?: unknown);
+extern dec armResourceOperations(
+  target: Interface,
+  resourceOperationOptions?: (valueof ResourceOperationOptions) | unknown
+);
+
+/** Interface-level operation options */
+model ResourceOperationOptions {
+  /**
+   * The resource type for the operations in the interface
+   */
+  resourceType?: Model;
+
+  /**
+   * If true, turns off autoRoute for the interface, so individual operations can choose static (`@route`) or automatic (`@autoRoute`) routing.
+   */
+  allowStaticRoutes?: boolean;
+
+  /**
+   * If true, turns off the default tagging of operations in the interface, so that individual operations must be individually tagged
+   */
+  omitTags?: boolean;
+}
 
 /**
  * This decorator is used either on a namespace or a version enum value to indicate
@@ -179,17 +245,18 @@ extern dec armCommonTypesVersion(
  * Azure.ResourceManager common types.
  *
  * @param propertiesType: The type of the resource properties.
+ * @param provider Optional. The resource provider namespace for the virtual resource.
  */
-extern dec armVirtualResource(target: Model);
+extern dec armVirtualResource(target: Model, provider?: valueof string);
 
 /**
  * This decorator sets the base type of the given resource.
  *
- * @param baseType The built-in parent of the resource, this can be "Tenant", "Subscription", "ResourceGroup", "Location", or "Extension"
+ * @param baseTypeIt The built-in parent of the resource, this can be "Tenant", "Subscription", "ResourceGroup", "Location", or "Extension"
  */
 extern dec resourceBaseType(
   target: Model,
-  baseType: "Tenant" | "Subscription" | "ResourceGroup" | "Location" | "Extension"
+  baseTypeIt: "Tenant" | "Subscription" | "ResourceGroup" | "Location" | "Extension"
 );
 
 /**
@@ -206,4 +273,4 @@ extern dec resourceBaseType(
  * }
  * ```
  */
-extern dec identifiers(entity: ModelProperty, properties: valueof string[]);
+extern dec identifiers(entity: ModelProperty | Array<unknown>, properties: valueof string[]);

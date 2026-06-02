@@ -1,4 +1,3 @@
-import "@typespec/openapi";
 import "@typespec/http";
 import "@typespec/rest";
 
@@ -11,7 +10,6 @@ import "../private.decorators.tsp";
 import "../parameters.tsp";
 
 using Http;
-using OpenAPI;
 using Azure.ResourceManager.Private;
 
 namespace Azure.ResourceManager.Foundations;
@@ -29,16 +27,16 @@ alias BaseParameters<Resource extends {}> = DefaultBaseParameters<Resource>;
  */
 @resourceBaseParametersOf(Resource)
 model DefaultBaseParameters<Resource extends {}> {
-  ...ApiVersionParameter;
+  ...CommonTypes.ApiVersionParameter;
 
   // unless tenant or extension
-  ...SubscriptionIdParameter;
+  ...CommonTypes.SubscriptionIdParameter;
 
   // deprecated, should not be used
-  ...LocationParameter;
+  ...CommonTypes.LocationParameter;
 
   // unless tenant, subscription, location, or extension
-  ...ResourceGroupParameter;
+  ...CommonTypes.ResourceGroupNameParameter;
 
   // unless tenant, subscription, location, or resourceGroup
   ...ResourceUriParameter;
@@ -59,14 +57,14 @@ model ArmTagsProperty {
  * The static parameters for a tenant-based resource
  */
 model TenantBaseParameters {
-  ...ApiVersionParameter;
+  ...CommonTypes.ApiVersionParameter;
 }
 
 /**
  * The static parameters for a subscription based resource
  */
 model SubscriptionBaseParameters is TenantBaseParameters {
-  ...SubscriptionIdParameter;
+  ...CommonTypes.SubscriptionIdParameter;
 }
 
 /**
@@ -80,7 +78,7 @@ model LocationBaseParameters is SubscriptionBaseParameters {
  * The static parameters for a resource-group based resource
  */
 model ResourceGroupBaseParameters is SubscriptionBaseParameters {
-  ...ResourceGroupParameter;
+  ...CommonTypes.ResourceGroupNameParameter;
 }
 
 /**
@@ -121,7 +119,6 @@ model ResourceUpdateModel<
     "Name" | "name" | "properties"
   >>> {
   /** The resource-specific properties for this resource. */
-  @conditionalClientFlatten
   properties?: ResourceUpdateModelProperties<Resource, Properties>;
 }
 
@@ -185,7 +182,6 @@ model ProxyResourceUpdateModel<
   Resource extends Foundations.SimpleResource,
   Properties extends TypeSpec.Reflection.Model
 > {
-  @conditionalClientFlatten
   properties?: ResourceUpdateModelProperties<Resource, Properties>;
 }
 
@@ -234,7 +230,7 @@ op checkNameAvailability<
   Response extends TypeSpec.Reflection.Model = CheckNameAvailabilityResponse,
   AdditionalParams extends TypeSpec.Reflection.Model = {}
 >(
-  ...ApiVersionParameter,
+  ...CommonTypes.ApiVersionParameter,
   ...ScopeParameters,
   ...AdditionalParams,
 
@@ -265,10 +261,9 @@ op ArmCreateOperation<
   BodyParameter extends {},
   Response extends {},
   ErrorResponse extends {}
->(
-  ...HttpParameters,
-  @doc("Resource create parameters.") @bodyRoot resource: BodyParameter,
-): Response | ErrorResponse;
+>(...HttpParameters, @doc("Resource create parameters.") @bodyRoot resource: BodyParameter):
+  | Response
+  | ErrorResponse;
 
 /**
  * @dev The base template for Azure Resource Manager PATCH Operations.
@@ -276,7 +271,6 @@ op ArmCreateOperation<
  * @template BodyParameter The body parameter
  * @template Response The response or union of responses for success.
  * @template ErrorResponse The error response.
- * @template RequestBody Optional. ENables changing the name, documentation, or optionality of the request body parameter
  */
 op ArmUpdateOperation<
   HttpParameters extends {},

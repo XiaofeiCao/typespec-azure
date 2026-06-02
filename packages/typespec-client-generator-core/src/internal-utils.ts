@@ -1,17 +1,26 @@
 import {
+  FinalStateValue,
+  getLroMetadata,
+  isPreviewVersion,
+  LroMetadata,
+} from "@azure-tools/typespec-azure-core";
+import {
   BooleanLiteral,
   compilerAssert,
   createDiagnosticCollector,
   Diagnostic,
+  Enum,
   getDeprecationDetails,
   getDoc,
   getLifecycleVisibilityEnum,
   getNamespaceFullName,
+  getSummary,
   getVisibilityForClass,
   ignoreDiagnostics,
   Interface,
   isNeverType,
   isNullType,
+  isTemplateDeclaration,
   isVoidType,
   listServices,
   Model,
@@ -29,34 +38,58 @@ import {
 import {
   unsafe_mutateSubgraphWithNamespace,
   unsafe_MutatorWithNamespace,
+  unsafe_Realm,
 } from "@typespec/compiler/experimental";
 import { $ } from "@typespec/compiler/typekit";
-import { HttpOperation, HttpOperationResponseContent, HttpPayloadBody } from "@typespec/http";
+import {
+  Authentication,
+  getHeaderFieldOptions,
+  getPathParamOptions,
+  getQueryParamOptions,
+  HttpOperation,
+  HttpOperationResponseContent,
+  HttpPayloadBody,
+  HttpServer,
+  isHeader,
+  isPathParam,
+  isQueryParam,
+} from "@typespec/http";
 import {
   getAddedOnVersions,
   getRemovedOnVersions,
   getVersioningMutators,
   getVersions,
 } from "@typespec/versioning";
-import { getClientDocExplicit, getParamAlias } from "./decorators.js";
+import {
+  getAlternateType,
+  getClientDocExplicit,
+  getClientLocation,
+  getIsApiVersion,
+  getMarkAsLro,
+  getOverriddenClientMethod,
+  getParamAlias,
+} from "./decorators.js";
 import {
   DecoratorInfo,
+  ExternalTypeInfo,
   SdkBuiltInType,
   SdkClient,
+  SdkClientType,
   SdkEnumType,
-  SdkHttpResponse,
-  SdkModelPropertyType,
+  SdkHeaderParameter,
+  SdkMethodParameter,
+  SdkServiceOperation,
   SdkType,
   TCGCContext,
 } from "./interfaces.js";
-import { createDiagnostic, createStateSymbol } from "./lib.js";
+import { createDiagnostic, createStateSymbol, reportDiagnostic } from "./lib.js";
+import { getSdkBasicServiceMethod } from "./methods.js";
 import {
   getCrossLanguageDefinitionId,
-  getDefaultApiVersion,
   getHttpOperationWithCache,
   isApiVersion,
 } from "./public-utils.js";
-import { getClientTypeWithDiagnostics, getSdkModelPropertyType } from "./types.js";
+import { getClientTypeWithDiagnostics } from "./types.js";
 
 export interface TCGCEmitterOptions extends BrandedSdkEmitterOptionsInterface {
   "emitter-name"?: string;
@@ -87,22 +120,140 @@ export const clientNamespaceKey = createStateSymbol("clientNamespace");
 export const negationScopesKey = createStateSymbol("negationScopes");
 export const scopeKey = createStateSymbol("scope");
 export const clientKey = createStateSymbol("client");
-export const operationGroupKey = createStateSymbol("operationGroup");
+export const clientLocationKey = createStateSymbol("clientLocation");
+export const omitOperation = createStateSymbol("omitOperation");
+export const overrideKey = createStateSymbol("override");
+export const usageKey = createStateSymbol("usage");
+export const legacyHierarchyBuildingKey = createStateSymbol("legacyHierarchyBuilding");
 
-export function hasExplicitClientOrOperationGroup(context: TCGCContext): boolean {
-  return (
-    listScopedDecoratorData(context, clientKey).length > 0 ||
-    listScopedDecoratorData(context, operationGroupKey).length > 0
-  );
+export function hasExplicitClient(context: TCGCContext): boolean {
+  return listScopedDecoratorData(context, clientKey).size > 0;
 }
 
-function listScopedDecoratorData(context: TCGCContext, key: symbol): any[] {
-  const retval = [...context.program.stateMap(key).values()];
-  return retval
-    .filter((targetEntry) => {
-      return targetEntry[context.emitterName] || targetEntry[AllScopes];
-    })
-    .flatMap((targetEntry) => targetEntry[context.emitterName] ?? targetEntry[AllScopes]);
+export function listScopedDecoratorData(
+  context: TCGCContext,
+  key: symbol,
+  languageScope?: string | typeof AllScopes,
+): Map<Type, any> {
+  const scope = languageScope ?? context.emitterName;
+  const retval: Map<Type, any> = new Map();
+  for (const [type, data] of context.program.stateMap(key).entries()) {
+    if (data[scope]) {
+      // positive scope case
+      retval.set(type, data[scope]);
+    } else if (data[negationScopesKey]) {
+      // negative scope case
+      if (data[negationScopesKey].includes(scope)) {
+        // if the scope is negated, we should not include it
+        continue;
+      } else {
+        // if the scope is not negated, we should include it
+        retval.set(type, data[AllScopes]);
+      }
+    } else if (data[AllScopes]) {
+      // all scopes case
+      retval.set(type, data[AllScopes]);
+    }
+  }
+  return retval;
+}
+
+export function getScopedDecoratorData(
+  context: TCGCContext,
+  key: symbol,
+  target: Type,
+  languageScope?: string | typeof AllScopes,
+): any {
+  const retval: Record<string | symbol, any> = context.program.stateMap(key).get(target);
+  if (retval === undefined) return retval;
+  if (languageScope === AllScopes) {
+    return retval[languageScope];
+  }
+  if (languageScope === undefined || typeof languageScope === "string") {
+    const scope = languageScope ?? context.emitterName;
+    if (scope in retval) return retval[scope];
+
+    // if the scope is negated, we should return undefined
+    // if the scope is not negated, we should return the value for AllScopes
+    const negationScopes = retval[negationScopesKey];
+    if (negationScopes !== undefined && negationScopes.includes(scope)) {
+      return undefined;
+    }
+  }
+  return retval[AllScopes]; // in this case it applies to all languages
+}
+
+/**
+ * Parse a scope string to extract negation scopes and positive scopes.
+ * Supports two syntax patterns:
+ * 1. !(scope1, scope2,...) - Grouped negation
+ * 2. !scope1, !scope2, scope3, ... - Individual negation with positive scopes
+ *
+ * @param scope The scope string to parse
+ * @returns A tuple of [negationScopes, positiveScopes] where each can be undefined if not present
+ */
+export function parseScopes(scope?: string): [string[]?, string[]?] {
+  if (scope === undefined) {
+    return [undefined, undefined];
+  }
+
+  // handle !(scope1, scope2,...) syntax
+  const negationScopeRegex = /!\((.*?)\)/;
+  const negationScopeMatch = scope.match(negationScopeRegex);
+  if (negationScopeMatch) {
+    return [negationScopeMatch[1].split(",").map((s) => s.trim()), undefined];
+  }
+
+  // handle !scope1, !scope2, scope3, ... syntax
+  const splitScopes = scope.split(",").map((s) => s.trim());
+  const negationScopes: string[] = [];
+  const scopes: string[] = [];
+  for (const s of splitScopes) {
+    if (s.startsWith("!")) {
+      negationScopes.push(s.slice(1));
+    } else {
+      scopes.push(s);
+    }
+  }
+  return [negationScopes, scopes];
+}
+
+/**
+ * Check if a scope string is applicable to the given emitter name.
+ * Handles negation scopes like "!python" or "!(java, python)".
+ *
+ * @param scopeArg The scope string from the decorator argument
+ * @param emitterName The current emitter name
+ * @returns true if the decorator should be included, false otherwise
+ */
+function isScopeApplicable(scopeArg: string, emitterName: string): boolean {
+  const [negationScopes, positiveScopes] = parseScopes(scopeArg);
+
+  // If there are positive scopes specified
+  if (positiveScopes !== undefined && positiveScopes.length > 0) {
+    // If the emitter matches any positive scope, include it
+    if (positiveScopes.includes(emitterName)) {
+      return true;
+    }
+    // If positive scopes specified but emitter doesn't match any, and no negation scopes
+    // then the decorator doesn't apply to this emitter
+    if (negationScopes === undefined || negationScopes.length === 0) {
+      return false;
+    }
+  }
+
+  // If there are negation scopes
+  if (negationScopes !== undefined && negationScopes.length > 0) {
+    // If the emitter is in the negation list, exclude it
+    if (negationScopes.includes(emitterName)) {
+      return false;
+    }
+    // If not in negation list, include it (applies to all except negated scopes)
+    return true;
+  }
+
+  // No scopes specified at all (empty string edge case)
+  return true;
 }
 
 /**
@@ -134,27 +285,78 @@ export function parseEmitterName(
 }
 
 /**
+ * Find the service namespace that contains the given operation.
+ * @param services Array of service namespaces
+ * @param operation The operation to find the service for
+ * @returns The service namespace that contains the operation
+ */
+export function findServiceForOperation(services: Namespace[], operation: Operation): Namespace {
+  // Follow the sourceOperation chain to find the original service namespace.
+  // This is needed when operations are defined using `is` in customization interfaces
+  // (e.g., `opB is ServiceB.Operations.opB`), where the operation's namespace is the
+  // customization namespace rather than the original service namespace.
+  let current: Operation | undefined = operation;
+  while (current) {
+    let namespace = current.namespace;
+    while (namespace) {
+      if (services.includes(namespace)) {
+        return namespace;
+      }
+      namespace = namespace.namespace;
+    }
+    current = current.sourceOperation;
+  }
+  // Fallback to the first service. This can happen when an operation is defined outside
+  // of any service namespace (e.g., in Azure.ResourceManager or other shared namespaces)
+  // and is imported into a client that combines multiple services. In such cases,
+  // we use the first service's api version as the default.
+  return services[0];
+}
+
+/**
  *
  * @param context
  * @param type The type that we are adding api version information onto
+ * @param client The client or sub clients that contains the operation
+ * @param operation The operation that contains the api version parameter (needed for multi-service sub clients)
  * @returns Whether the type is the api version parameter and the default value for the client
  */
 export function updateWithApiVersionInformation(
   context: TCGCContext,
   type: ModelProperty,
-  namespace?: Namespace | Interface,
+  client?: SdkClient,
+  operation?: Operation,
 ): {
   isApiVersionParam: boolean;
   clientDefaultValue?: string;
 } {
   const isApiVersionParam = isApiVersion(context, type);
-  return {
-    isApiVersionParam,
-    clientDefaultValue:
-      isApiVersionParam && namespace
-        ? context.__clientToApiVersionClientDefaultValue.get(namespace)
-        : undefined,
-  };
+  if (!isApiVersionParam || !client) {
+    return { isApiVersionParam, clientDefaultValue: undefined };
+  }
+
+  // For single-service clients, use the cached value
+  if (client.services.length <= 1) {
+    return {
+      isApiVersionParam,
+      clientDefaultValue: context.__clientApiVersionDefaultValueCache.get(client),
+    };
+  }
+
+  // For multi-service clients/sub clients, we need to find the api version
+  // from the operation's specific service
+  if (operation) {
+    const service = findServiceForOperation(client.services, operation);
+    const packageVersions = context.getPackageVersions().get(service) || [];
+    return {
+      isApiVersionParam,
+      clientDefaultValue:
+        packageVersions.length > 0 ? packageVersions[packageVersions.length - 1] : undefined,
+    };
+  }
+
+  // No operation provided for multi-service client, return undefined
+  return { isApiVersionParam, clientDefaultValue: undefined };
 }
 
 export function filterApiVersionsWithDecorators(
@@ -223,7 +425,7 @@ export function getAvailableApiVersions(
     return explicitlyDecorated;
   }
   context.setApiVersionsForType(type, wrapperApiVersions);
-  return context.getApiVersionsForType(type);
+  return wrapperApiVersions;
 }
 
 /**
@@ -247,6 +449,9 @@ interface DefaultSdkTypeBase<TKind> {
   deprecation?: string;
   kind: TKind;
   decorators: DecoratorInfo[];
+  external?: ExternalTypeInfo;
+  doc?: string;
+  summary?: string;
 }
 
 /**
@@ -259,12 +464,29 @@ export function getSdkTypeBaseHelper<TKind>(
   kind: TKind,
 ): [DefaultSdkTypeBase<TKind>, readonly Diagnostic[]] {
   const diagnostics = createDiagnosticCollector();
-  return diagnostics.wrap({
+
+  const base: DefaultSdkTypeBase<TKind> = {
     __raw: type,
     deprecation: getDeprecationDetails(context.program, type)?.message,
     kind,
     decorators: diagnostics.pipe(getTypeDecorators(context, type)),
-  });
+    doc: getClientDoc(context, type),
+    summary: getSummary(context.program, type),
+  };
+  if (
+    type.kind === "ModelProperty" ||
+    type.kind === "Scalar" ||
+    type.kind === "Model" ||
+    type.kind === "Enum" ||
+    type.kind === "Union"
+  ) {
+    const external = getAlternateType(context, type);
+    // Only set external if it's an ExternalTypeInfo (has 'identity' but not 'kind' property), not a regular Type
+    if (external && external.kind === "externalTypeInfo") {
+      base.external = external;
+    }
+  }
+  return diagnostics.wrap(base);
 }
 
 export function getNamespacePrefix(namespace: Namespace): string {
@@ -299,6 +521,14 @@ export function getTypeDecorators(
             getDecoratorArgValue(context, decorator.args[i].jsValue, type, decoratorName),
           );
         }
+
+        // Filter by scope - only include decorators that match the current emitter or have no scope
+        const scopeArg = decoratorInfo.arguments["scope"];
+        if (scopeArg !== undefined && !isScopeApplicable(scopeArg, context.emitterName)) {
+          // Skip this decorator if its scope is not applicable to the current emitter
+          continue;
+        }
+
         retval.push(decoratorInfo);
       }
     }
@@ -324,9 +554,14 @@ function getDecoratorArgValue(
   const diagnostics = createDiagnosticCollector();
   if (typeof arg === "object" && arg !== null && "kind" in arg) {
     if (arg.kind === "EnumMember") {
-      return diagnostics.wrap(diagnostics.pipe(getClientTypeWithDiagnostics(context, arg)));
+      return diagnostics.wrap(diagnostics.pipe(getClientTypeWithDiagnostics(context, arg as any)));
     }
-    if (arg.kind === "String" || arg.kind === "Number" || arg.kind === "Boolean") {
+    if (
+      arg.kind === "String" ||
+      arg.kind === "Number" ||
+      arg.kind === "Boolean" ||
+      arg.kind === "Value"
+    ) {
       return diagnostics.wrap(arg.value);
     }
     diagnostics.add(
@@ -358,22 +593,12 @@ export function isAzureCoreTspModel(t: Type): boolean {
   );
 }
 
-export function isAcceptHeader(param: SdkModelPropertyType): boolean {
+export function isAcceptHeader(param: SdkHeaderParameter): boolean {
   return param.kind === "header" && param.serializedName.toLowerCase() === "accept";
 }
 
-export function isContentTypeHeader(param: SdkModelPropertyType): boolean {
+export function isContentTypeHeader(param: SdkHeaderParameter): boolean {
   return param.kind === "header" && param.serializedName.toLowerCase() === "content-type";
-}
-
-export function isMultipartOperation(context: TCGCContext, operation?: Operation): boolean {
-  if (!operation) return false;
-  const httpOperation = getHttpOperationWithCache(context, operation);
-  const httpBody = httpOperation.parameters.body;
-  if (httpBody && httpBody.type.kind === "Model") {
-    return httpBody.contentTypes.some((x) => x.startsWith("multipart/"));
-  }
-  return false;
 }
 
 export function isHttpOperation(context: TCGCContext, obj: any): obj is HttpOperation {
@@ -382,32 +607,19 @@ export function isHttpOperation(context: TCGCContext, obj: any): obj is HttpOper
 
 export type TspLiteralType = StringLiteral | NumericLiteral | BooleanLiteral;
 
+/** A node in a context path that tracks the traversal position for naming anonymous types. */
+export interface ContextNode {
+  name: string;
+  // Type can be undefined to indicate "anonymous" context (e.g., when property type is a named union)
+  type: Model | Union | TspLiteralType | Operation | undefined;
+}
+
 export function getNonNullOptions(type: Union): Type[] {
   return [...type.variants.values()].map((x) => x.type).filter((t) => !isNullType(t));
 }
 
 export function getNullOption(type: Union): Type | undefined {
   return [...type.variants.values()].map((x) => x.type).filter((t) => isNullType(t))[0];
-}
-
-export function getAllResponseBodiesAndNonBodyExists(responses: SdkHttpResponse[]): {
-  allResponseBodies: SdkType[];
-  nonBodyExists: boolean;
-} {
-  const allResponseBodies: SdkType[] = [];
-  let nonBodyExists = false;
-  for (const response of responses) {
-    if (response.type) {
-      allResponseBodies.push(response.type);
-    } else {
-      nonBodyExists = true;
-    }
-  }
-  return { allResponseBodies, nonBodyExists };
-}
-
-export function getAllResponseBodies(responses: SdkHttpResponse[]): SdkType[] {
-  return getAllResponseBodiesAndNonBodyExists(responses).allResponseBodies;
 }
 
 /**
@@ -418,7 +630,7 @@ export function getAllResponseBodies(responses: SdkHttpResponse[]): SdkType[] {
  */
 export function createGeneratedName(
   context: TCGCContext,
-  type: Namespace | Operation,
+  type: Interface | Namespace | Operation,
   suffix: string,
 ): string {
   return `${getCrossLanguageDefinitionId(context, type).split(".").at(-1)}${suffix}`;
@@ -426,11 +638,6 @@ export function createGeneratedName(
 
 export function isSubscriptionId(context: TCGCContext, parameter: { name: string }): boolean {
   return Boolean(context.arm) && parameter.name === "subscriptionId";
-}
-
-export function getLocationOfOperation(operation: Operation): Namespace | Interface {
-  // have to check interface first, because interfaces are more granular than namespaces
-  return (operation.interface || operation.namespace)!;
 }
 
 export function isNeverOrVoidType(type: Type): boolean {
@@ -478,18 +685,30 @@ export function removeVersionsLargerThanExplicitlySpecified(
   }
 }
 
-export function filterApiVersionsInEnum(
+export function filterPreviewVersion(
   context: TCGCContext,
-  client: SdkClient,
   sdkVersionsEnum: SdkEnumType,
+  defaultApiVersion: string,
 ): void {
   // if they explicitly set an api version, remove larger versions
   removeVersionsLargerThanExplicitlySpecified(context, sdkVersionsEnum.values);
-  const defaultApiVersion = getDefaultApiVersion(context, client.service);
-  if (!context.previewStringRegex.test(defaultApiVersion?.value || "")) {
-    sdkVersionsEnum.values = sdkVersionsEnum.values.filter(
-      (v) => typeof v.value === "string" && !context.previewStringRegex.test(v.value),
-    );
+  if (!context.previewStringRegex.test(defaultApiVersion)) {
+    sdkVersionsEnum.values = sdkVersionsEnum.values.filter((v) => {
+      if (typeof v.value !== "string") {
+        return true;
+      }
+
+      // Check if the version has `@previewVersion` decorator
+      if (v.__raw && v.__raw.kind === "EnumMember") {
+        const enumMember = v.__raw;
+        if (isPreviewVersion(context.program, enumMember)) {
+          return false;
+        }
+      }
+
+      // Fall back to regex check for backward compatibility
+      return !context.previewStringRegex.test(v.value);
+    });
   }
 }
 
@@ -502,11 +721,13 @@ export function twoParamsEquivalent(
     return false;
   }
   return (
-    param1.name === param2.name ||
-    getParamAlias(context, param1) === param2.name ||
-    param1.name === getParamAlias(context, param2)
+    param1.type === param2.type &&
+    (param1.name === param2.name ||
+      getParamAlias(context, param1) === param2.name ||
+      param1.name === getParamAlias(context, param2))
   );
 }
+
 /**
  * If body is from spread, then it does not directly from a model property.
  * @param httpBody
@@ -518,26 +739,30 @@ export function isHttpBodySpread(httpBody: HttpPayloadBody): boolean {
 }
 
 /**
- * If body is from simple spread, then we use the original model as body model.
+ * If body is from simple spread, then we use the original model as body model. Else we return the body type directly.
  * @param type
  * @returns
  */
-export function getHttpBodySpreadModel(type: Model): Model {
-  if (type.sourceModels.length === 1 && type.sourceModels[0].usage === "spread") {
-    const innerModel = type.sourceModels[0].model;
-    // for case: `op test(...Model):void;`
-    if (innerModel.name !== "" && innerModel.properties.size === type.properties.size) {
-      return innerModel;
+export function getHttpBodyType(httpBody: HttpPayloadBody): Type {
+  const type = httpBody.type;
+  if (isHttpBodySpread(httpBody) && type.kind === "Model") {
+    if (type.sourceModels.length === 1 && type.sourceModels[0].usage === "spread") {
+      const innerModel = type.sourceModels[0].model;
+      // for case: `op test(...Model):void;`
+      if (innerModel.name !== "" && innerModel.properties.size === type.properties.size) {
+        return innerModel;
+      }
+      // for case: `op test(@header h: string, @query q: string, ...Model): void;`
+      if (
+        innerModel.sourceModels.length === 1 &&
+        innerModel.sourceModels[0].usage === "spread" &&
+        innerModel.sourceModels[0].model.name !== "" &&
+        innerModel.sourceModels[0].model.properties.size === type.properties.size
+      ) {
+        return innerModel.sourceModels[0].model;
+      }
     }
-    // for case: `op test(@header h: string, @query q: string, ...Model): void;`
-    if (
-      innerModel.sourceModels.length === 1 &&
-      innerModel.sourceModels[0].usage === "spread" &&
-      innerModel.sourceModels[0].model.name !== "" &&
-      innerModel.sourceModels[0].model.properties.size === type.properties.size
-    ) {
-      return innerModel.sourceModels[0].model;
-    }
+    return type;
   }
   return type;
 }
@@ -548,17 +773,76 @@ export function isOnClient(
   operation?: Operation,
   versioning?: boolean,
 ): boolean {
-  const namespace = operation ? getLocationOfOperation(operation) : type.model?.namespace;
+  const clientLocation = getClientLocation(context, type);
+  if (
+    operation &&
+    clientLocation === (getOverriddenClientMethod(context, operation) ?? operation)
+  ) {
+    // if the type has explicitly been moved to the operation, it is not on the client
+    return false;
+  }
+  // When using @override, @clientLocation might be on the override operation's parameter
+  // rather than on the original operation's parameter. Check the override's corresponding
+  // parameter for @clientLocation targeting the override operation.
+  if (operation) {
+    const override = getOverriddenClientMethod(context, operation);
+    if (override) {
+      for (const [, overrideParam] of override.parameters.properties) {
+        if (
+          compareModelProperties(context.program, overrideParam, type) &&
+          getClientLocation(context, overrideParam) === override
+        ) {
+          return false;
+        }
+      }
+    }
+  }
   return (
     isSubscriptionId(context, type) ||
     (isApiVersion(context, type) && versioning) ||
-    Boolean(
-      namespace &&
-        context.__clientToParameters
-          .get(namespace)
-          ?.find((x) => twoParamsEquivalent(context, x.__raw, type)),
-    )
+    (operation !== undefined && getCorrespondingClientParam(context, type, operation) !== undefined)
   );
+}
+
+export function getCorrespondingClientParam(
+  context: TCGCContext,
+  type: ModelProperty,
+  operation: Operation,
+): SdkMethodParameter | undefined {
+  // When @clientLocation explicitly targets this operation, the parameter should stay at
+  // the method level and not be mapped to an existing client parameter.
+  const clientLocation = getClientLocation(context, type);
+  if (
+    clientLocation &&
+    clientLocation === (getOverriddenClientMethod(context, operation) ?? operation)
+  ) {
+    return undefined;
+  }
+
+  const clientParams = [];
+  let client: SdkClient | undefined = context.getClientForOperation(operation);
+  while (client) {
+    const clientParamsForClient = context.__clientParametersCache.get(client);
+    if (clientParamsForClient) {
+      clientParams.push(...clientParamsForClient);
+    }
+    if (!client.parent) {
+      break;
+    }
+    client = client.parent;
+  }
+  const correspondingClientParam = clientParams?.find((x) =>
+    twoParamsEquivalent(context, x.__raw, type),
+  );
+  if (correspondingClientParam) {
+    // If the parameter is explicitly marked as not an API version parameter via @apiVersion(false),
+    // it should not be matched to a client API version parameter.
+    if (getIsApiVersion(context, type) === false && correspondingClientParam.isApiVersionParam) {
+      return undefined;
+    }
+    return correspondingClientParam;
+  }
+  return undefined;
 }
 
 export function getValueTypeValue(
@@ -582,7 +866,7 @@ export function getValueTypeValue(
           getValueTypeValue(value.properties.get(x)!.value),
         ]),
       );
-    case "ScalarValue":
+    default:
       // TODO: handle scalar value
       return undefined;
   }
@@ -640,14 +924,13 @@ export function getStreamAsBytes(
 function getVersioningMutator(
   context: TCGCContext,
   service: Namespace,
-  apiVersion: string,
-): unsafe_MutatorWithNamespace {
+  apiVersion?: string,
+): unsafe_MutatorWithNamespace | undefined {
   const versionMutator = getVersioningMutators(context.program, service);
-  compilerAssert(
-    versionMutator !== undefined && versionMutator.kind !== "transient",
-    "Versioning service should not get undefined or transient versioning mutator",
-  );
-
+  if (!versionMutator) return undefined;
+  if (versionMutator.kind === "transient") {
+    return versionMutator.mutator;
+  }
   const mutators = versionMutator.snapshots
     .filter((snapshot) => apiVersion === snapshot.version.value)
     .map((x) => x.mutator);
@@ -658,16 +941,82 @@ function getVersioningMutator(
 
 export function handleVersioningMutationForGlobalNamespace(context: TCGCContext): Namespace {
   const globalNamespace = context.program.getGlobalNamespaceType();
-  const allApiVersions = context.getPackageVersions();
-  if (allApiVersions.length === 0 || context.apiVersion === "all") return globalNamespace;
 
-  const mutator = getVersioningMutator(
-    context,
-    listServices(context.program)[0].type,
-    allApiVersions[allApiVersions.length - 1],
-  );
-  const subgraph = unsafe_mutateSubgraphWithNamespace(context.program, [mutator], globalNamespace);
+  // First consider explicit clients
+  const servicesNs = new Set<Namespace>();
+  listScopedDecoratorData(context, clientKey).forEach((v, k) => {
+    // See all explicit clients that in TypeSpec program
+    if (!unsafe_Realm.realmForType.has(k)) {
+      (v as SdkClient).services.forEach((s) => servicesNs.add(s));
+    }
+  });
+
+  // Then see the original services
+  if (servicesNs.size === 0) {
+    listServices(context.program).map((v) => servicesNs.add(v.type));
+  }
+
+  // No service, thus no versioning mutation needed
+  if (servicesNs.size === 0) return globalNamespace;
+
+  // Multi services' client should not honor the specific api-version set in config
+  if (
+    servicesNs.size > 1 &&
+    context.apiVersion !== undefined &&
+    context.apiVersion !== "latest" &&
+    context.apiVersion !== "all"
+  ) {
+    context.apiVersion = undefined;
+  }
+
+  // Explicit all API version setting, thus no versioning mutation needed
+  if (context.apiVersion === "all") return globalNamespace;
+
+  // Compose service mutators
+  const mutators: unsafe_MutatorWithNamespace[] = [];
+
+  for (const serviceNs of servicesNs) {
+    const versions = getVersions(context.program, serviceNs)[1]?.getVersions();
+    // If the service has no versioning, no mutation needed
+    if (!versions || versions.length === 0) return globalNamespace;
+
+    // Single service needs to filter versions based on `apiVersion` config
+    if (servicesNs.size === 1) {
+      removeVersionsLargerThanExplicitlySpecified(context, versions);
+    }
+
+    const versionsValues = versions.map((v) => v.value);
+
+    // Fix apiVersion setting problem only if there's only one service
+    if (servicesNs.size === 1) {
+      if (
+        context.apiVersion !== undefined &&
+        context.apiVersion !== "latest" &&
+        context.apiVersion !== "all" &&
+        !versionsValues.includes(context.apiVersion)
+      ) {
+        reportDiagnostic(context.program, {
+          code: "api-version-undefined",
+          format: { version: context.apiVersion },
+          target: serviceNs,
+        });
+        context.apiVersion = versionsValues[versionsValues.length - 1];
+      }
+    }
+
+    // Get service mutator according to the version setting
+    const mutator = getVersioningMutator(
+      context,
+      serviceNs,
+      versionsValues[versionsValues.length - 1],
+    );
+    if (mutator) mutators.push(mutator);
+  }
+  if (mutators.length === 0) return globalNamespace;
+  const subgraph = unsafe_mutateSubgraphWithNamespace(context.program, mutators, globalNamespace);
   compilerAssert(subgraph.type.kind === "Namespace", "Should not have mutated to another type");
+  compilerAssert(subgraph.realm !== null, "Should have a realm after mutation");
+  context.__mutatedRealm = subgraph.realm;
   return subgraph.type;
 }
 
@@ -691,6 +1040,7 @@ export function resolveConflictGeneratedName(context: TCGCContext) {
     .filter((x) => !x.isGeneratedName)
     .map((x) => x.name);
   const generatedNames = [...context.__generatedNames.values()];
+
   for (const sdkType of context.__referencedTypeCache.values()) {
     if (sdkType.__raw && sdkType.isGeneratedName && userDefinedNames.includes(sdkType.name)) {
       const rawName = sdkType.name;
@@ -723,28 +1073,335 @@ export function getClientDoc(context: TCGCContext, target: Type): string | undef
 }
 
 export function compareModelProperties(
-  context: TCGCContext | undefined,
+  program: Program,
   modelPropA: ModelProperty | undefined,
   modelPropB: ModelProperty | undefined,
 ): boolean {
   if (!modelPropA || !modelPropB) return false;
   if (modelPropA.name !== modelPropB.name || modelPropA.type !== modelPropB.type) return false;
-  if (!context) return true; // if we don't have a context, we can't further compare the types. Assume true.
-  const sdkA = ignoreDiagnostics(getSdkModelPropertyType(context, modelPropA));
-  const sdkB = ignoreDiagnostics(getSdkModelPropertyType(context, modelPropB));
-  if (sdkA.kind === "method" || sdkB.kind === "method") {
-    // if we're comparing method vs service param, we just need to check the name and type
-    return true;
+  const aIsQuery = isQueryParam(program, modelPropA);
+  const aIsHeader = isHeader(program, modelPropA);
+  const aIsPath = isPathParam(program, modelPropA);
+  const bIsQuery = isQueryParam(program, modelPropB);
+  const bIsHeader = isHeader(program, modelPropB);
+  const bIsPath = isPathParam(program, modelPropB);
+  // Return false when both have explicit HTTP parameter kinds but they differ
+  const aHasHttpKind = aIsQuery || aIsHeader || aIsPath;
+  const bHasHttpKind = bIsQuery || bIsHeader || bIsPath;
+  if (aHasHttpKind && bHasHttpKind) {
+    if (aIsQuery !== bIsQuery || aIsHeader !== bIsHeader || aIsPath !== bIsPath) return false;
   }
-  switch (sdkA.kind) {
-    case "cookie":
-    case "header":
-    case "query":
-    case "path":
-    case "responseheader":
-    case "body":
-      return sdkA.kind === sdkB.kind && sdkA.serializedName === sdkB.serializedName;
-    default:
-      return sdkA.kind === sdkB.kind;
+  if (
+    aIsQuery &&
+    bIsQuery &&
+    getQueryParamOptions(program, modelPropA)?.name !==
+      getQueryParamOptions(program, modelPropB)?.name
+  ) {
+    return false;
   }
+  if (
+    aIsHeader &&
+    bIsHeader &&
+    getHeaderFieldOptions(program, modelPropA)?.name !==
+      getHeaderFieldOptions(program, modelPropB)?.name
+  ) {
+    return false;
+  }
+  if (
+    aIsPath &&
+    bIsPath &&
+    getPathParamOptions(program, modelPropA)?.name !==
+      getPathParamOptions(program, modelPropB)?.name
+  ) {
+    return false;
+  }
+  return true;
+}
+
+export function* filterMapValuesIterator<V>(
+  iterator: MapIterator<V>,
+  predicate: (value: V) => boolean,
+): MapIterator<V> {
+  for (const value of iterator) {
+    if (predicate(value)) {
+      yield value;
+    }
+  }
+}
+
+/**
+ * Find all entries in a scoped decorator state map where the target matches a specific value
+ */
+export function findEntriesWithTarget<TSource extends Type, TTarget>(
+  context: TCGCContext,
+  stateKey: symbol,
+  targetValue: TTarget,
+  sourceKind?: TSource["kind"],
+): TSource[] {
+  const results: TSource[] = [];
+
+  for (const [type, target] of listScopedDecoratorData(context, stateKey)) {
+    if (sourceKind && type.kind !== sourceKind) {
+      continue;
+    }
+    if (target === targetValue) {
+      results.push(type as TSource);
+    }
+  }
+  return results;
+}
+
+/**
+ * Retrieves Long Running Operation (LRO) metadata for a given operation.
+ *
+ * This function serves as a wrapper that:
+ * 1. First tries to get LRO metadata using the `getLroMetadata` function from the Azure Core library
+ * 2. If unavailable or undefined, it would check for the existence of a `getMarkAsLro` function
+ *    and return a mock LRO metadata object if the operation is marked as LRO
+ *
+ * @param context - The TypeSpec client generator context
+ * @param operation - The TypeSpec operation to check for LRO metadata
+ * @returns The LRO metadata for the operation if available, otherwise undefined
+ */
+export function getTcgcLroMetadata<TServiceOperation extends SdkServiceOperation>(
+  context: TCGCContext,
+  operation: Operation,
+  client: SdkClientType<TServiceOperation>,
+): LroMetadata | undefined {
+  const lroMetaData = getLroMetadata(context.program, operation);
+  if (lroMetaData) {
+    return lroMetaData;
+  }
+  if (getMarkAsLro(context, operation)) {
+    // we guard against this in the setting of `@markAsLro`
+    const sdkMethod = ignoreDiagnostics(getSdkBasicServiceMethod(context, operation, client));
+    let returnType: Model;
+    const sdkMethodResponseType = sdkMethod.response.type!;
+    switch (sdkMethodResponseType.kind) {
+      case "nullable":
+        returnType = sdkMethodResponseType.type.__raw! as Model;
+        break;
+      case "model":
+        returnType = sdkMethodResponseType.__raw! as Model;
+        break;
+      default:
+        throw new Error(
+          `LRO method ${operation.name} with @markAsLro must have a model return type.`,
+        );
+    }
+    return {
+      operation,
+      logicalResult: returnType,
+      finalStateVia: FinalStateValue.location,
+      pollingInfo: {
+        kind: "pollingOperationStep",
+        responseModel: returnType,
+        terminationStatus: {
+          kind: "status-code",
+        },
+      },
+      envelopeResult: returnType,
+      finalEnvelopeResult: returnType,
+      finalResult: returnType,
+    };
+  }
+  return undefined;
+}
+
+export function getActualClientType(client: SdkClient): Namespace | Interface {
+  if (client.type) return client.type;
+  // For merged multi-service sub clients where type is cleared or sub client created by string client location, fall back to the first service
+  return client.services[0];
+}
+
+export function isSameServers(left: HttpServer[], right: HttpServer[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  for (let i = 0; i < left.length; i++) {
+    if (left[i].url !== right[i].url) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export function isSameAuth(left: Authentication, right: Authentication): boolean {
+  if (left.options.length !== right.options.length) {
+    return false;
+  }
+  for (let i = 0; i < left.options.length; i++) {
+    if (left.options[i].schemes.length !== right.options[i].schemes.length) {
+      return false;
+    }
+    for (let j = 0; j < left.options[i].schemes.length; j++) {
+      const leftScheme = left.options[i].schemes[j];
+      const rightScheme = right.options[i].schemes[j];
+      if (leftScheme.type !== rightScheme.type) {
+        return false;
+      }
+      switch (leftScheme.type) {
+        case "http":
+          compilerAssert(rightScheme.type === "http", "Unexpected auth scheme type mismatch");
+          if (leftScheme.scheme !== rightScheme.scheme) {
+            return false;
+          }
+          break;
+        case "apiKey":
+          compilerAssert(rightScheme.type === "apiKey", "Unexpected auth scheme type mismatch");
+          if (leftScheme.name !== rightScheme.name || leftScheme.in !== rightScheme.in) {
+            return false;
+          }
+          break;
+        case "oauth2":
+          compilerAssert(rightScheme.type === "oauth2", "Unexpected auth scheme type mismatch");
+          if (leftScheme.flows.length !== rightScheme.flows.length) {
+            return false;
+          }
+          for (let k = 0; k < leftScheme.flows.length; k++) {
+            const leftFlow = leftScheme.flows[k];
+            const rightFlow = rightScheme.flows[k];
+            if (leftFlow.type !== rightFlow.type) {
+              return false;
+            }
+            if (leftFlow.scopes.length !== rightFlow.scopes.length) {
+              return false;
+            }
+            for (let l = 0; l < leftFlow.scopes.length; l++) {
+              if (leftFlow.scopes[l].value !== rightFlow.scopes[l].value) {
+                return false;
+              }
+            }
+            switch (leftFlow.type) {
+              case "authorizationCode":
+                compilerAssert(
+                  rightFlow.type === "authorizationCode",
+                  "Unexpected auth scheme type mismatch",
+                );
+                if (
+                  leftFlow.authorizationUrl !== rightFlow.authorizationUrl ||
+                  leftFlow.tokenUrl !== rightFlow.tokenUrl ||
+                  leftFlow.refreshUrl !== rightFlow.refreshUrl
+                ) {
+                  return false;
+                }
+                break;
+              case "clientCredentials":
+                compilerAssert(
+                  rightFlow.type === "clientCredentials",
+                  "Unexpected auth scheme type mismatch",
+                );
+                if (
+                  leftFlow.tokenUrl !== rightFlow.tokenUrl ||
+                  leftFlow.refreshUrl !== rightFlow.refreshUrl
+                ) {
+                  return false;
+                }
+                break;
+              case "implicit":
+                compilerAssert(
+                  rightFlow.type === "implicit",
+                  "Unexpected auth scheme type mismatch",
+                );
+                if (
+                  leftFlow.authorizationUrl !== rightFlow.authorizationUrl ||
+                  leftFlow.refreshUrl !== rightFlow.refreshUrl
+                ) {
+                  return false;
+                }
+                break;
+              case "password":
+                compilerAssert(
+                  rightFlow.type === "password",
+                  "Unexpected auth scheme type mismatch",
+                );
+                if (
+                  leftFlow.authorizationUrl !== rightFlow.authorizationUrl ||
+                  leftFlow.refreshUrl !== rightFlow.refreshUrl
+                ) {
+                  return false;
+                }
+                break;
+            }
+          }
+          break;
+        case "openIdConnect":
+          compilerAssert(
+            rightScheme.type === "openIdConnect",
+            "Unexpected auth scheme type mismatch",
+          );
+          if (leftScheme.openIdConnectUrl !== rightScheme.openIdConnectUrl) {
+            return false;
+          }
+          break;
+      }
+    }
+  }
+  return true;
+}
+
+export function isTypeNeedsHandling(context: TCGCContext, type: Type): boolean {
+  return (
+    (context.__mutatedRealm === undefined && !unsafe_Realm.realmForType.has(type)) ||
+    (context.__mutatedRealm !== undefined && context.__mutatedRealm.hasType(type))
+  );
+}
+
+export function listOrphanTypes(context: TCGCContext): (Model | Enum | Union)[] {
+  if (context.__orphanTypesCache) return context.__orphanTypesCache;
+  const result: (Model | Enum | Union)[] = [];
+  const seen = new Set<Model | Enum | Union>();
+
+  function addType(type: Model | Enum | Union) {
+    if (seen.has(type)) return;
+    if ((type.kind === "Model" || type.kind === "Union") && isTemplateDeclaration(type)) return;
+    if (!isTypeNeedsHandling(context, type)) return;
+    seen.add(type);
+    result.push(type);
+  }
+
+  function addNamespace(namespace: Namespace) {
+    const namespaces = [namespace];
+    let currentIndex = 0;
+    while (currentIndex < namespaces.length) {
+      const ns = namespaces[currentIndex];
+      for (const model of ns.models.values()) {
+        addType(model);
+      }
+      for (const enumType of ns.enums.values()) {
+        addType(enumType);
+      }
+      for (const unionType of ns.unions.values()) {
+        addType(unionType);
+      }
+      namespaces.push(...ns.namespaces.values());
+      currentIndex++;
+    }
+  }
+
+  // Iterate all types/namespaces with an explicit @usage decorator. This covers
+  // models, enums, and unions defined anywhere (including imported libraries),
+  // not only those declared inside user-defined namespaces.
+  for (const [type] of listScopedDecoratorData(context, usageKey)) {
+    if (type.kind === "Namespace") {
+      // @@usage applied to a namespace propagates to its member types,
+      // recursively descending into sub-namespaces.
+      addNamespace(type);
+    } else if (type.kind === "Model" || type.kind === "Enum" || type.kind === "Union") {
+      addType(type);
+    }
+  }
+
+  // Iterate all models with an explicit @hierarchyBuilding decorator (only
+  // honored when legacy hierarchy building is enabled).
+  if (context.enableLegacyHierarchyBuilding) {
+    for (const [type] of listScopedDecoratorData(context, legacyHierarchyBuildingKey)) {
+      if (type.kind === "Model") {
+        addType(type);
+      }
+    }
+  }
+
+  context.__orphanTypesCache = result;
+  return result;
 }

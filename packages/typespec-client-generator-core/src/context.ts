@@ -3,10 +3,13 @@ import {
   EmitContext,
   emitFile,
   Enum,
-  listServices,
+  getRelativePathFromDirectory,
+  Interface,
+  isPathAbsolute,
   Model,
   ModelProperty,
   Namespace,
+  normalizePath,
   Operation,
   Program,
   resolvePath,
@@ -14,34 +17,36 @@ import {
   Union,
 } from "@typespec/compiler";
 import { HttpOperation } from "@typespec/http";
-import { getVersions } from "@typespec/versioning";
 import { stringify } from "yaml";
+import { prepareClientAndOperationCache } from "./cache.js";
 import { defaultDecoratorsAllowList } from "./configs.js";
 import { handleClientExamples } from "./example.js";
 import {
-  getKnownScalars,
   SdkArrayType,
+  SdkClient,
   SdkContext,
   SdkDictionaryType,
   SdkEnumType,
   SdkHttpOperation,
+  SdkMethodParameter,
   SdkModelPropertyType,
   SdkModelType,
   SdkNullableType,
   SdkServiceOperation,
+  SdkServiceResponseHeader,
   SdkUnionType,
   TCGCContext,
+  UsageFlags,
 } from "./interfaces.js";
 import {
   BrandedSdkEmitterOptionsInterface,
   handleVersioningMutationForGlobalNamespace,
   parseEmitterName,
-  removeVersionsLargerThanExplicitlySpecified,
   TCGCEmitterOptions,
   TspLiteralType,
 } from "./internal-utils.js";
+import { createDiagnostic } from "./lib.js";
 import { createSdkPackage } from "./package.js";
-import { listAllServiceNamespaces } from "./public-utils.js";
 
 interface CreateTCGCContextOptions {
   mutateNamespace?: boolean; // whether to mutate global namespace for versioning
@@ -69,27 +74,27 @@ export function createTCGCContext(
       SdkModelType | SdkEnumType | SdkUnionType | SdkNullableType
     >(),
     __arrayDictionaryCache: new Map<Type, SdkDictionaryType | SdkArrayType>(),
+    __methodParameterCache: new Map<ModelProperty, SdkMethodParameter>(),
     __modelPropertyCache: new Map<ModelProperty, SdkModelPropertyType>(),
+    __responseHeaderCache: new Map<ModelProperty, SdkServiceResponseHeader>(),
     __generatedNames: new Map<Union | Model | TspLiteralType, string>(),
     __httpOperationCache: new Map<Operation, HttpOperation>(),
-    __clientToParameters: new Map(),
+    __clientParametersCache: new Map(),
     __tspTypeToApiVersions: new Map(),
-    __clientToApiVersionClientDefaultValue: new Map(),
-    __knownScalars: getKnownScalars(),
+    __clientApiVersionDefaultValueCache: new Map(),
     __httpOperationExamples: new Map(),
     __pagedResultSet: new Set(),
+    __namingContextPath: [],
 
     getMutatedGlobalNamespace(): Namespace {
       if (options?.mutateNamespace === false) {
         // If we are not mutating the global namespace, return the original global namespace type.
         return program.getGlobalNamespaceType();
       }
-      let globalNamespace = this.__mutatedGlobalNamespace;
-      if (!globalNamespace) {
-        globalNamespace = handleVersioningMutationForGlobalNamespace(this);
-        this.__mutatedGlobalNamespace = globalNamespace;
+      if (!this.__mutatedGlobalNamespace) {
+        this.__mutatedGlobalNamespace = handleVersioningMutationForGlobalNamespace(this);
       }
-      return globalNamespace;
+      return this.__mutatedGlobalNamespace;
     },
     getApiVersionsForType(type): string[] {
       return this.__tspTypeToApiVersions.get(type) ?? [];
@@ -104,36 +109,48 @@ export function createTCGCContext(
       }
       this.__tspTypeToApiVersions.set(type, mergedApiVersions);
     },
-    getPackageVersions(): string[] {
-      if (this.__packageVersions) {
-        return this.__packageVersions;
-      }
-      const service = listServices(program)[0];
-      if (!service) {
-        this.__packageVersions = [];
-        return this.__packageVersions;
+    getPackageVersions(): Map<Namespace, string[]> {
+      if (!this.__packageVersions) {
+        prepareClientAndOperationCache(this);
       }
 
-      const versions = getVersions(program, service.type)[1]?.getVersions();
-      if (!versions) {
-        this.__packageVersions = [];
-        return this.__packageVersions;
-      }
-
-      removeVersionsLargerThanExplicitlySpecified(this, versions);
-
-      this.__packageVersions = versions.map((version) => version.value);
-      return this.__packageVersions;
+      return this.__packageVersions!;
     },
-    getPackageVersionEnum(): Enum | undefined {
-      if (this.__packageVersionEnum) {
-        return this.__packageVersionEnum;
+    getPackageVersionEnum(): Map<Namespace, Enum | undefined> {
+      if (!this.__packageVersionEnum) {
+        prepareClientAndOperationCache(this);
       }
-      const namespaces = listAllServiceNamespaces(this);
-      if (namespaces.length === 0) {
-        return undefined;
+      return this.__packageVersionEnum!;
+    },
+    getClients(): SdkClient[] {
+      if (!this.__rawClientsCache) {
+        prepareClientAndOperationCache(this);
       }
-      return getVersions(this.program, namespaces[0])[1]?.getVersions()?.[0].enumMember.enum;
+      return [...new Set(this.__rawClientsCache!.values())];
+    },
+    getRootClients(): SdkClient[] {
+      if (!this.__rawClientsCache) {
+        prepareClientAndOperationCache(this);
+      }
+      return [...new Set(this.__rawClientsCache!.values())].filter((item) => !item.parent);
+    },
+    getClient(type: Namespace | Interface): SdkClient | undefined {
+      if (!this.__rawClientsCache) {
+        prepareClientAndOperationCache(this);
+      }
+      return this.__rawClientsCache!.get(type);
+    },
+    getOperationsForClient(client: SdkClient): Operation[] {
+      if (!this.__clientToOperationsCache) {
+        prepareClientAndOperationCache(this);
+      }
+      return this.__clientToOperationsCache!.get(client)!;
+    },
+    getClientForOperation(operation: Operation): SdkClient {
+      if (!this.__operationToClientCache) {
+        prepareClientAndOperationCache(this);
+      }
+      return this.__operationToClientCache!.get(operation)!;
     },
   };
 }
@@ -148,6 +165,7 @@ export interface CreateSdkContextOptions {
   disableUsageAccessPropagationToBase?: boolean; // this flag is for some languages that has no need to generate base model, but generate model with composition
   exportTCGCoutput?: boolean; // this flag is for emitter to export TCGC output as yaml file
   flattenUnionAsEnum?: boolean; // this flag is for emitter to decide whether tcgc should flatten union as enum
+  enableLegacyHierarchyBuilding?: boolean; // this flag is for emitter to decide whether tcgc should respect the `@hierarchyBuilding` decorator
 }
 
 export async function createSdkContext<
@@ -173,7 +191,6 @@ export async function createSdkContext<
     sdkPackage: undefined!,
     generateProtocolMethods: generateProtocolMethods,
     generateConvenienceMethods: generateConvenienceMethods,
-    examplesDir: context.options["examples-dir"],
     namespaceFlag: context.options["namespace"],
     apiVersion: context.options["api-version"],
     license: context.options["license"],
@@ -181,17 +198,68 @@ export async function createSdkContext<
     previewStringRegex: options?.versioning?.previewStringRegex || tcgcContext.previewStringRegex,
     disableUsageAccessPropagationToBase: options?.disableUsageAccessPropagationToBase ?? false,
     flattenUnionAsEnum: options?.flattenUnionAsEnum ?? true,
+    enableLegacyHierarchyBuilding: options?.enableLegacyHierarchyBuilding ?? true,
   };
-  sdkContext.sdkPackage = diagnostics.pipe(createSdkPackage(sdkContext));
+
+  if (context.options["examples-dir"]) {
+    const normalizeExamplesDir = normalizePath(context.options["examples-dir"]);
+    if (isPathAbsolute(normalizeExamplesDir)) {
+      sdkContext.examplesDir = getRelativePathFromDirectory(
+        context.program.projectRoot,
+        normalizeExamplesDir,
+        false,
+      );
+    } else {
+      sdkContext.examplesDir = normalizeExamplesDir;
+    }
+  }
+  sdkContext.sdkPackage = diagnostics.pipe(await createSdkPackage(sdkContext));
   for (const client of sdkContext.sdkPackage.clients) {
     diagnostics.pipe(await handleClientExamples(sdkContext, client));
   }
-  sdkContext.diagnostics = sdkContext.diagnostics.concat(diagnostics.diagnostics);
+  // Validate duplicate names within each type kind in each namespace (cross-kind duplicates are allowed).
+  diagnostics.pipe(validateNamesUnderNamespaces(sdkContext));
+  sdkContext.diagnostics = [...sdkContext.diagnostics, ...diagnostics.diagnostics];
 
   if (options?.exportTCGCoutput) {
     await exportTCGCOutput(sdkContext);
   }
   return sdkContext;
+}
+
+function validateNamesUnderNamespaces(context: SdkContext) {
+  const diagnostics = createDiagnosticCollector();
+  const validateItems = (namespaceItems: (SdkModelType | SdkEnumType | SdkUnionType)[]) => {
+    const seenNames = new Set<string>();
+    for (const item of namespaceItems) {
+      if (seenNames.has(item.name)) {
+        diagnostics.add(
+          createDiagnostic({
+            code: "duplicate-client-name",
+            format: { name: item.name, scope: context.emitterName },
+            target: item.__raw!,
+          }),
+        );
+      } else {
+        seenNames.add(item.name);
+      }
+    }
+  };
+
+  const validateNamespace = (namespace: SdkContext["sdkPackage"]["namespaces"][number]) => {
+    validateItems(namespace.models);
+    validateItems(namespace.enums.filter((e) => (e.usage & UsageFlags.ApiVersionEnum) === 0));
+    validateItems(namespace.unions.filter((u): u is SdkUnionType => u.kind === "union"));
+    for (const nestedNamespace of namespace.namespaces) {
+      validateNamespace(nestedNamespace);
+    }
+  };
+
+  for (const namespace of context.sdkPackage.namespaces) {
+    validateNamespace(namespace);
+  }
+
+  return diagnostics.wrap(undefined);
 }
 
 async function exportTCGCOutput(context: SdkContext) {

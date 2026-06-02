@@ -1,7 +1,7 @@
 import { expectDiagnostics } from "@typespec/compiler/testing";
 import { deepStrictEqual, ok, strictEqual } from "assert";
 import { describe, expect, it } from "vitest";
-import { diagnoseOpenApiFor, oapiForModel, openApiFor } from "./test-host.js";
+import { compileOpenAPI, diagnoseOpenApiFor, oapiForModel } from "./test-host.js";
 
 describe("typespec-autorest: model definitions", () => {
   it("defines models", async () => {
@@ -22,8 +22,27 @@ describe("typespec-autorest: model definitions", () => {
     });
   });
 
+  it("allows secrets on models", async () => {
+    const res = await oapiForModel(
+      "Foo",
+      `@secret
+       model Foo {
+        x: int32;
+      };`,
+    );
+
+    deepStrictEqual(res.defs.Foo, {
+      type: "object",
+      properties: {
+        x: { type: "integer", format: "int32" },
+      },
+      required: ["x"],
+      "x-ms-secret": true,
+    });
+  });
+
   it("change definition name with @clientName", async () => {
-    const res = await openApiFor(`@clientName("ClientFoo") model Foo {};`);
+    const res = await compileOpenAPI(`@clientName("ClientFoo") model Foo {};`, { preset: "azure" });
     expect(res.definitions).toHaveProperty("ClientFoo");
     expect(res.definitions).not.toHaveProperty("Foo");
   });
@@ -41,6 +60,20 @@ describe("typespec-autorest: model definitions", () => {
     );
     strictEqual(res.defs.Foo.title, "FooModel");
     strictEqual(res.defs.Foo.properties.y.title, "YProp");
+  });
+
+  it("emits property-level @example", async () => {
+    const res = await oapiForModel(
+      "Test",
+      `
+      model Test {
+        @TypeSpec.example("core.windows.net")
+        abcd: string;
+      };
+      `,
+    );
+
+    expect(res.defs.Test.properties.abcd.example).toEqual("core.windows.net");
   });
 
   it("uses json name specified via @encodedName", async () => {
@@ -166,31 +199,8 @@ describe("typespec-autorest: model definitions", () => {
     });
   });
 
-  it("specify default value on nullable property", async () => {
-    const res = await oapiForModel(
-      "Foo",
-      `
-      model Foo {
-        optional?: string | null = null;
-      };
-      `,
-    );
-
-    ok(res.defs.Foo, "expected definition named Foo");
-    deepStrictEqual(res.defs.Foo, {
-      type: "object",
-      properties: {
-        optional: {
-          type: "string",
-          "x-nullable": true,
-          default: null,
-        },
-      },
-    });
-  });
-
   it("emits models extended from models when parent is emitted", async () => {
-    const res = await openApiFor(
+    const res = await compileOpenAPI(
       `
       model Parent {
         x?: int32;
@@ -201,7 +211,7 @@ describe("typespec-autorest: model definitions", () => {
       @route("/") op test(): Parent;
       `,
     );
-    deepStrictEqual(res.definitions.Parent, {
+    deepStrictEqual(res.definitions?.Parent, {
       type: "object",
       properties: { x: { type: "integer", format: "int32" } },
     });
@@ -306,7 +316,7 @@ describe("typespec-autorest: model definitions", () => {
   });
 
   it("ignore uninstantiated template types", async () => {
-    const res = await openApiFor(
+    const res = await compileOpenAPI(
       `
       model Parent {
         x?: int32;
@@ -321,6 +331,7 @@ describe("typespec-autorest: model definitions", () => {
       @route("/") op test(): Parent;
       `,
     );
+    ok(res.definitions);
     ok(!("TParent" in res.definitions), "Parent templated type shouldn't be included in OpenAPI");
     deepStrictEqual(res.definitions.Parent, {
       type: "object",
@@ -340,7 +351,7 @@ describe("typespec-autorest: model definitions", () => {
   });
 
   it("shouldn't emit instantiated template child types that are only used in is", async () => {
-    const res = await openApiFor(
+    const res = await compileOpenAPI(
       `
       model Parent {
         x?: int32;
@@ -355,7 +366,7 @@ describe("typespec-autorest: model definitions", () => {
       `,
     );
     ok(
-      !("TParent_string" in res.definitions),
+      !("TParent_string" in res.definitions!),
       "Parent instantiated templated type shouldn't be included in OpenAPI",
     );
   });
@@ -555,180 +566,8 @@ describe("typespec-autorest: model definitions", () => {
     deepStrictEqual(res.defs.Pet.properties.someString.default, "withDefault");
   });
 
-  describe("nullable", () => {
-    it("defines nullable properties", async () => {
-      const res = await oapiForModel(
-        "Pet",
-        `
-      model Pet {
-        name: string | null;
-      };
-      `,
-      );
-      ok(res.isRef);
-      deepStrictEqual(res.defs.Pet, {
-        type: "object",
-        properties: {
-          name: {
-            type: "string",
-            "x-nullable": true,
-          },
-        },
-        required: ["name"],
-      });
-    });
-
-    it("defines nullable array", async () => {
-      const res = await oapiForModel(
-        "Pet",
-        `
-      model Pet {
-        name: int32[] | null;
-      };
-      `,
-      );
-      ok(res.isRef);
-      deepStrictEqual(res.defs.Pet, {
-        type: "object",
-        properties: {
-          name: {
-            type: "array",
-            items: {
-              type: "integer",
-              format: "int32",
-            },
-            "x-nullable": true,
-          },
-        },
-        required: ["name"],
-      });
-    });
-
-    it("defines nullable enum", async () => {
-      const res = await oapiForModel(
-        "Pet",
-        `
-      enum PetKind { dog, cat }
-      model Pet {
-        kind: PetKind | null;
-      };
-      `,
-      );
-      ok(res.isRef);
-      deepStrictEqual(res.defs.Pet, {
-        type: "object",
-        properties: {
-          kind: {
-            $ref: "#/definitions/PetKind",
-            "x-nullable": true,
-          },
-        },
-        required: ["kind"],
-      });
-      deepStrictEqual(res.defs.PetKind, {
-        type: "string",
-        enum: ["dog", "cat"],
-        "x-ms-enum": {
-          modelAsString: false,
-          name: "PetKind",
-        },
-      });
-    });
-
-    it("defines nullable union", async () => {
-      const res = await oapiForModel(
-        "Pet",
-        `
-      union PetKind { "dog", "cat" }
-      model Pet {
-        kind: PetKind | null;
-      };
-      `,
-      );
-      ok(res.isRef);
-      deepStrictEqual(res.defs.Pet, {
-        type: "object",
-        properties: {
-          kind: {
-            $ref: "#/definitions/PetKind",
-            "x-nullable": true,
-          },
-        },
-        required: ["kind"],
-      });
-      deepStrictEqual(res.defs.PetKind, {
-        type: "string",
-        enum: ["dog", "cat"],
-        "x-ms-enum": {
-          modelAsString: false,
-          name: "PetKind",
-        },
-      });
-    });
-
-    it("defines nullable model", async () => {
-      const res = await openApiFor(
-        `
-        model Pet {
-          name: string;
-        }
-  
-        model Dog {
-          type: Pet | null;
-        }
-        `,
-      );
-      deepStrictEqual(res.definitions.Dog.properties.type, {
-        $ref: "#/definitions/Pet",
-        "x-nullable": true,
-      });
-    });
-
-    it("defines nullable record", async () => {
-      const res = await openApiFor(
-        `
-        model Pet {
-          name: string;
-        }
-  
-        model Dog {
-          record: Record<Pet | null>;
-        }
-        `,
-      );
-      deepStrictEqual(res.definitions.Dog.properties.record, {
-        additionalProperties: {
-          $ref: "#/definitions/Pet",
-          "x-nullable": true,
-        },
-        type: "object",
-      });
-    });
-
-    it("defines nullable Array", async () => {
-      const res = await openApiFor(
-        `
-        model Pet {
-          name: string;
-        }
-  
-        model Dog {
-         arrayProp: Array<Pet | null>;
-        }
-        `,
-      );
-      deepStrictEqual(res.definitions.Dog.properties.arrayProp, {
-        items: {
-          $ref: "#/definitions/Pet",
-          "x-nullable": true,
-        },
-        type: "array",
-      });
-    });
-  });
-
   it("recovers logical type name", async () => {
-    const oapi = await openApiFor(
+    const oapi: any = await compileOpenAPI(
       `
       model Thing {
         name?: string;
@@ -740,7 +579,7 @@ describe("typespec-autorest: model definitions", () => {
       `,
     );
 
-    deepStrictEqual(oapi.definitions.Thing, {
+    deepStrictEqual(oapi.definitions?.Thing, {
       type: "object",
       properties: {
         name: {
@@ -756,7 +595,7 @@ describe("typespec-autorest: model definitions", () => {
       },
     );
 
-    deepStrictEqual(oapi.paths["/things/{id}"].get.responses["200"].schema, {
+    deepStrictEqual(oapi.paths["/things/{id}"].get?.responses["200"].schema!, {
       $ref: "#/definitions/Thing",
     });
   });

@@ -42,6 +42,13 @@ configuration:
           - if:
               - includesModifiedFiles:
                   files:
+                    - packages/typespec-python/**/*
+            then:
+              - addLabel:
+                  label: emitter:python
+          - if:
+              - includesModifiedFiles:
+                  files:
                     - packages/typespec-client-generator-core/**/*
             then:
               - addLabel:
@@ -49,7 +56,7 @@ configuration:
           - if:
               - includesModifiedFiles:
                   files:
-                    - packages/typespec-azure-http-specs/**/*
+                    - packages/azure-http-specs/**/*
             then:
               - addLabel:
                   label: lib:azure-http-specs
@@ -65,3 +72,16 @@ configuration:
             then:
               - addLabel:
                   label: cli/psh
+          - if:
+              - includesModifiedFiles:
+                  files: []
+            then:
+              - addLabel:
+                  label: emitter:client:all
+          - if:
+              - includesModifiedFiles:
+                  files:
+                    - website/**/*
+            then:
+              - addLabel:
+                  label: meta:website

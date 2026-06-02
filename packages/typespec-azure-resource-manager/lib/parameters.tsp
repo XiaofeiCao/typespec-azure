@@ -1,6 +1,5 @@
 using Http;
 using Rest;
-using OpenAPI;
 using Azure.ResourceManager.Foundations;
 using Azure.ResourceManager.Private;
 using Azure.ResourceManager.CommonTypes;
@@ -132,6 +131,7 @@ model ResourceUriParameter {
  * where the resource is based.  The default is in a resource group
  * @template Resource The resource to get parameters for
  * @template BaseParameters The parameters representing the base Uri of the resource
+ * @template Provider Optional. The provider namespace model for the resource.
  *
  * @example
  * ```typespec
@@ -142,10 +142,11 @@ model ResourceUriParameter {
  */
 model ResourceInstanceParameters<
   Resource extends {},
-  BaseParameters = DefaultBaseParameters<Resource>
+  BaseParameters = DefaultBaseParameters<Resource>,
+  Provider extends {} = ProviderNamespace<Resource>
 > {
   ...BaseParameters;
-  ...ProviderNamespace<Resource>;
+  ...Provider;
   ...KeysOf<Resource>;
 }
 
@@ -154,13 +155,15 @@ model ResourceInstanceParameters<
  * where the list should take place.  The default is in a resource group
  * @template Resource The resource to get parameters for
  * @template BaseParameters The parameters representing the base Uri of the resource
+ * @template Provider Optional. The provider namespace model for the resource.
  */
 model ResourceParentParameters<
   Resource extends Foundations.SimpleResource,
-  BaseParameters = DefaultBaseParameters<Resource>
+  BaseParameters = DefaultBaseParameters<Resource>,
+  Provider extends {} = ProviderNamespace<Resource>
 > {
   ...BaseParameters;
-  ...ProviderNamespace<Resource>;
+  ...Provider;
   ...ParentKeysOf<Resource>;
 }
 
@@ -221,6 +224,38 @@ model TenantActionScope {
 }
 
 /**
+ * Scope for operation status endpoints at the tenant level with a location path segment.
+ * Use with `GetResourceOperationStatus` to produce:
+ * `GET /providers/{providerNamespace}/locations/{location}/operationStatuses/{operationId}`
+ *
+ * @example
+ * ```typespec
+ * op getStatus is GetResourceOperationStatus<ArmOperationStatus, TenantLocationActionScope>;
+ * ```
+ */
+@armVirtualResource
+@tenantResource
+model TenantLocationActionScope {
+  ...LocationResourceParameter;
+}
+
+/**
+ * Scope for operation status endpoints at the subscription level with a location path segment.
+ * Use with `GetResourceOperationStatus` to produce:
+ * `GET /subscriptions/{subscriptionId}/providers/{providerNamespace}/locations/{location}/operationStatuses/{operationId}`
+ *
+ * @example
+ * ```typespec
+ * op getStatus is GetResourceOperationStatus<ArmOperationStatus, SubscriptionLocationActionScope>;
+ * ```
+ */
+@armVirtualResource
+@subscriptionResource
+model SubscriptionLocationActionScope {
+  ...LocationResourceParameter;
+}
+
+/**
  * Template used by ArmProviderAction templates. This produces following action route:
  * `/{resourceUri}/providers/Microsoft.SomeRP/someAction`
  */
@@ -233,4 +268,48 @@ model ExtensionResourceActionScope {
   @key
   @segment("extensionresource")
   name: string;
+}
+
+/**
+ * Template used by ArmProviderAction templates. This produces following action route:
+ * `/{scope}/providers/Microsoft.SomeRP/someAction`
+ * @template StringType The type of the scope name parameter, defaults to string.
+ */
+model ExtensionActionScope<StringType extends string = string>
+  is Extension.ScopeParameter<StringType>;
+
+/**
+ * Standard list parameter $top, allows the user to control the total number of returned items.
+ */
+model ArmTopParameter {
+  @query("$top")
+  @doc("The total number of items to return.")
+  top: int64;
+}
+
+/**
+ * Standard list parameter $filter, allows the user to filter the results of a list operation.
+ */
+model ArmFilterParameter {
+  @query("$filter")
+  @doc("The OData filter expression to apply to the list operation.")
+  filter: string;
+}
+
+/**
+ * List parameter $skip, allows the user to control the offset of returned items.
+ */
+model ArmSkipParameter {
+  @query("$skip")
+  @doc("The number of items to skip before starting to collect the result set.")
+  skip: int64;
+}
+
+/**
+ * Standard list parameter $skiptoken, normally returned in the `nextLink` url of a page of items
+ */
+model SkipTokenParameter {
+  @query("$skiptoken")
+  @doc("An opaque value to use for pagination.")
+  skipToken: string;
 }

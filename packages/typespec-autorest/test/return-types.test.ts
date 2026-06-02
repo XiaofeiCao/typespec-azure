@@ -1,7 +1,7 @@
 import { expectDiagnostics } from "@typespec/compiler/testing";
 import { deepStrictEqual, ok, strictEqual } from "assert";
 import { describe, expect, it } from "vitest";
-import { createAutorestTestRunner, ignoreUseStandardOps, openApiFor } from "./test-host.js";
+import { ignoreUseStandardOps, openApiFor, Tester } from "./test-host.js";
 
 describe("typespec-autorest: return types", () => {
   it("model used with @body and without shouldn't conflict if it contains no metadata", async () => {
@@ -158,7 +158,7 @@ describe("typespec-autorest: return types", () => {
   it("defines separate responses for each variant of a union return type", async () => {
     const res = await openApiFor(
       `
-      @doc("Error")
+      
       @error
       model Error {
         code: int32;
@@ -185,7 +185,7 @@ describe("typespec-autorest: return types", () => {
   it("defines the response media type from the content-type header if present", async () => {
     const res = await openApiFor(
       `
-      @doc("Error")
+      
       @error
       model Error {
         code: int32;
@@ -226,8 +226,7 @@ describe("typespec-autorest: return types", () => {
   });
 
   it("issues diagnostics when there is differrent body types across content types", async () => {
-    const runner = await createAutorestTestRunner();
-    const diagnostics = await runner.diagnose(
+    const diagnostics = await Tester.diagnose(
       `
       model Foo {
         @header contentType: "application/json";

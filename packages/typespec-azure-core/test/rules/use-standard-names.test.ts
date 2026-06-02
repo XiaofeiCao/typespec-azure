@@ -1,18 +1,13 @@
-import {
-  BasicTestRunner,
-  LinterRuleTester,
-  createLinterRuleTester,
-} from "@typespec/compiler/testing";
+import { Tester } from "#test/test-host.js";
+import { LinterRuleTester, createLinterRuleTester } from "@typespec/compiler/testing";
 import { beforeEach, describe, it } from "vitest";
 import { useStandardNames } from "../../src/rules/use-standard-names.js";
-import { createAzureCoreTestRunner } from "../test-host.js";
 
 describe("typespec-azure-core: use-standard-names rule", () => {
-  let runner: BasicTestRunner;
   let tester: LinterRuleTester;
 
   beforeEach(async () => {
-    runner = await createAzureCoreTestRunner();
+    const runner = await Tester.createInstance();
     tester = createLinterRuleTester(runner, useStandardNames, "@azure-tools/typespec-azure-core");
   });
 
@@ -22,11 +17,10 @@ describe("typespec-azure-core: use-standard-names rule", () => {
         `
         model Foo {};
 
-        @pagedResult
         model FooPage {
           @nextLink
           next: string,
-          @items
+          @pageItems
           value: Foo[];
         }
         
@@ -40,6 +34,7 @@ describe("typespec-azure-core: use-standard-names rule", () => {
         @get op returnFoo(): Foo;
         
         @route("2")
+        @list
         @get op getFoos(): FooPage;
         
         @route("3")
@@ -49,6 +44,7 @@ describe("typespec-azure-core: use-standard-names rule", () => {
         @put op wholeNewFoo(@body body: Foo): FooResponse<Foo, 200>;
         
         @route("5")
+        #suppress "@typespec/http/deprecated-implicit-optionality" "For test"
         @patch(#{implicitOptionality: true}) op changeFoo(@body body: Foo): FooResponse<Foo, 201>;
         
         @route("6")
@@ -96,11 +92,10 @@ describe("typespec-azure-core: use-standard-names rule", () => {
         `
       model Foo {};
 
-      @pagedResult
       model FooPage {
         @nextLink
         next: string,
-        @items
+        @pageItems
         value: Foo[];
       }
       
@@ -114,6 +109,7 @@ describe("typespec-azure-core: use-standard-names rule", () => {
       @get op getFoo(): Foo;
       
       @route("2")
+      @list
       @get op listFoos(): FooPage;
       
       @route("3")
@@ -125,7 +121,9 @@ describe("typespec-azure-core: use-standard-names rule", () => {
       @route("5")
       @put op replaceFoo(@body body: Foo): FooResponse<Foo, 200>;
       
+      #suppress "@typespec/http/deprecated-implicit-optionality" "For test"
       @route("6")
+      #suppress "@typespec/http/deprecated-implicit-optionality" "For test"
       @patch(#{implicitOptionality: true}) op createOrUpdateFoo(@body body: Foo): FooResponse<Foo, 201>;
       
       @route("7")

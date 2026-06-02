@@ -28,11 +28,17 @@ configuration:
                 - hasLabel:
                     label: emitter:autorest
                 - hasLabel:
+                    label: emitter:python
+                - hasLabel:
+                    label: emitter:client:all
+                - hasLabel:
                     label: eng
                 - hasLabel:
                     label: ide
                 - hasLabel:
                     label: cli/psh
+                - hasLabel:
+                    label: meta:website
         then:
           - addLabel:
               label: needs-area
@@ -54,11 +60,17 @@ configuration:
               - labelAdded:
                   label: emitter:autorest
               - labelAdded:
+                  label: emitter:python
+              - labelAdded:
+                  label: emitter:client:all
+              - labelAdded:
                   label: eng
               - labelAdded:
                   label: ide
               - labelAdded:
                   label: cli/psh
+              - labelAdded:
+                  label: meta:website
         then:
           - removeLabel:
               label: needs-area
@@ -81,11 +93,17 @@ configuration:
               - labelRemoved:
                   label: emitter:autorest
               - labelRemoved:
+                  label: emitter:python
+              - labelRemoved:
+                  label: emitter:client:all
+              - labelRemoved:
                   label: eng
               - labelRemoved:
                   label: ide
               - labelRemoved:
                   label: cli/psh
+              - labelRemoved:
+                  label: meta:website
           - not:
               or:
                 - hasLabel:
@@ -99,11 +117,17 @@ configuration:
                 - hasLabel:
                     label: emitter:autorest
                 - hasLabel:
+                    label: emitter:python
+                - hasLabel:
+                    label: emitter:client:all
+                - hasLabel:
                     label: eng
                 - hasLabel:
                     label: ide
                 - hasLabel:
                     label: cli/psh
+                - hasLabel:
+                    label: meta:website
         then:
           - addLabel:
               label: needs-area

@@ -1,50 +1,38 @@
 import { resolvePath } from "@typespec/compiler";
 import {
-  BasicTestRunner,
+  EmitterTesterInstance,
   expectDiagnosticEmpty,
   expectDiagnostics,
   resolveVirtualPath,
+  TestEmitterCompileResult,
 } from "@typespec/compiler/testing";
 import { deepStrictEqual, ok, strictEqual } from "assert";
 import { beforeEach, describe, it } from "vitest";
 import { AutorestEmitterOptions } from "../src/lib.js";
-import { OpenAPI2Document } from "../src/openapi2-document.js";
-import { createAutorestTestRunner, ignoreDiagnostics } from "./test-host.js";
+import { ApiTester, compileOpenAPI, ignoreDiagnostics, Tester } from "./test-host.js";
 
-async function openapiWithOptions(
-  code: string,
-  options: AutorestEmitterOptions,
-): Promise<OpenAPI2Document> {
-  const runner = await createAutorestTestRunner();
+let runner: EmitterTesterInstance<TestEmitterCompileResult>;
 
-  const outPath = resolvePath("/openapi.json");
+beforeEach(async () => {
+  runner = await Tester.createInstance();
+});
 
-  const diagnostics = await runner.diagnose(code, {
-    noEmit: false,
-    emit: ["@azure-tools/typespec-autorest"],
-    options: { "@azure-tools/typespec-autorest": { ...options, "output-file": outPath } },
+function compileOpenAPIWithOptions(code: string, options: AutorestEmitterOptions) {
+  return compileOpenAPI(code, {
+    options: { ...options, "output-file": "openapi.json" },
+    preset: "azure",
   });
-
-  expectDiagnosticEmpty(diagnostics.filter((x) => x.code !== "@typespec/http/no-service-found"));
-
-  const content = runner.fs.get(outPath)!;
-  return JSON.parse(content);
 }
 
 describe("typespec-autorest: options", () => {
-  let runner: BasicTestRunner;
-  beforeEach(async () => {
-    runner = await createAutorestTestRunner();
-  });
-
   describe("'new-line' option", () => {
     async function rawOpenApiFor(code: string, options: AutorestEmitterOptions): Promise<string> {
-      const outPath = resolvePath("/openapi.json");
-
-      const diagnostics = await runner.diagnose(code, {
-        noEmit: false,
-        emit: ["@azure-tools/typespec-autorest"],
-        options: { "@azure-tools/typespec-autorest": { ...options, "output-file": outPath } },
+      const [{ outputs }, diagnostics] = await runner.compileAndDiagnose(code, {
+        compilerOptions: {
+          options: {
+            "@azure-tools/typespec-autorest": { ...options },
+          },
+        },
       });
 
       expectDiagnosticEmpty(
@@ -54,7 +42,7 @@ describe("typespec-autorest: options", () => {
         ]),
       );
 
-      return runner.fs.get(outPath)!;
+      return outputs["openapi.json"];
     }
 
     // Content of an empty spec
@@ -106,14 +94,14 @@ describe("typespec-autorest: options", () => {
         #suppress "@azure-tools/typespec-azure-core/use-standard-operations" "This is a test."
         op test(): void;`,
         {
-          noEmit: false,
-          emit: ["@azure-tools/typespec-autorest"],
-          options: {
-            "@azure-tools/typespec-autorest": { "emitter-output-dir": emitterOutputDir },
+          compilerOptions: {
+            options: {
+              "@azure-tools/typespec-autorest": { "emitter-output-dir": emitterOutputDir },
+            },
           },
         },
       );
-      ok(runner.fs.has(resolvePath(emitterOutputDir, "openapi.json")));
+      ok(runner.fs.fs.has(resolvePath(emitterOutputDir, "openapi.json")));
     });
 
     it("emit to {emitter-output-dir}/{output-file} if provided", async () => {
@@ -122,21 +110,21 @@ describe("typespec-autorest: options", () => {
         #suppress "@azure-tools/typespec-azure-core/use-standard-operations" "This is a test."
         op test(): void;`,
         {
-          noEmit: false,
-          outputDir: "./my-output",
-          emit: ["@azure-tools/typespec-autorest"],
-          options: {
-            "@azure-tools/typespec-autorest": {
-              "emitter-output-dir": emitterOutputDir,
+          compilerOptions: {
+            outputDir: "./my-output",
+            options: {
+              "@azure-tools/typespec-autorest": {
+                "emitter-output-dir": emitterOutputDir,
+              },
             },
           },
         },
       );
-      ok(runner.fs.has(resolveVirtualPath("./my-output/openapi.json")));
+      ok(runner.fs.fs.has(resolveVirtualPath("./my-output/openapi.json")));
     });
 
-    it("emit to {emitter-output-dir}/{version}/{output-file} if spec contains versioning", async () => {
-      const versionedRunner = await createAutorestTestRunner();
+    it("emit to {emitter-output-dir}/{version-status}/{version}/{output-file} if spec contains versioning", async () => {
+      const versionedRunner = await Tester.createInstance();
       await versionedRunner.compile(
         `
 @TypeSpec.Versioning.versioned(Versions)
@@ -144,69 +132,31 @@ describe("typespec-autorest: options", () => {
 namespace DemoService;
 enum Versions {v1, v2}
 
-#suppress "@azure-tools/typespec-azure-core/use-standard-operations" "This is a test."
 op test(): void;
       `,
         {
-          noEmit: false,
-          outputDir: "./my-output",
-          emit: ["@azure-tools/typespec-autorest"],
-          options: {
-            "@azure-tools/typespec-autorest": {
-              "emitter-output-dir": emitterOutputDir,
+          compilerOptions: {
+            outputDir: "./my-output",
+            options: {
+              "@azure-tools/typespec-autorest": {
+                "emitter-output-dir": emitterOutputDir,
+              },
             },
           },
         },
       );
       ok(
-        !versionedRunner.fs.has(resolveVirtualPath("./my-output/openapi.json")),
+        !versionedRunner.fs.fs.has(resolveVirtualPath("./my-output/openapi.json")),
         "Shouldn't have created the non versioned file name",
       );
-      ok(versionedRunner.fs.has(resolveVirtualPath("./my-output/v1/openapi.json")));
-      ok(versionedRunner.fs.has(resolveVirtualPath("./my-output/v2/openapi.json")));
-    });
-
-    it("emit to {emitter-output-dir}/{arm-folder}/{serviceName}/{versionType}/{version}/{output-file} if spec contains azure-resource-provider-folder is passed", async () => {
-      const versionedRunner = await createAutorestTestRunner();
-      await versionedRunner.compile(
-        `
-@TypeSpec.Versioning.versioned(Versions)
-@service(#{title: "Widget Service"})
-namespace TestService;
-enum Versions {v1, "v2-preview"}
-
-#suppress "@azure-tools/typespec-azure-core/use-standard-operations" "This is a test."
-op test(): void;
-      `,
-        {
-          noEmit: false,
-          outputDir: "./my-output",
-          emit: ["@azure-tools/typespec-autorest"],
-          options: {
-            "@azure-tools/typespec-autorest": {
-              "emitter-output-dir": emitterOutputDir,
-              "azure-resource-provider-folder": "./arm-folder",
-            },
-          },
-        },
-      );
-
-      ok(
-        versionedRunner.fs.has(
-          resolveVirtualPath("./my-output/arm-folder/TestService/stable/v1/openapi.json"),
-        ),
-      );
-      ok(
-        versionedRunner.fs.has(
-          resolveVirtualPath("./my-output/arm-folder/TestService/preview/v2-preview/openapi.json"),
-        ),
-      );
+      ok(versionedRunner.fs.fs.has(resolveVirtualPath("./my-output/stable/v1/openapi.json")));
+      ok(versionedRunner.fs.fs.has(resolveVirtualPath("./my-output/stable/v2/openapi.json")));
     });
   });
 
   describe("omit-unreachable-types", () => {
     it("emit unreferenced types by default", async () => {
-      const output = await openapiWithOptions(
+      const output = await compileOpenAPIWithOptions(
         `
         model NotReferenced {name: string}
         model Referenced {name: string}
@@ -218,7 +168,7 @@ op test(): void;
     });
 
     it("emit only referenced types when using omit-unreachable-types", async () => {
-      const output = await openapiWithOptions(
+      const output = await compileOpenAPIWithOptions(
         `
         model NotReferenced {name: string}
         model Referenced {name: string}
@@ -242,19 +192,19 @@ op test(): void;
       }
     `;
     it("doesn't include version enum by default", async () => {
-      const output = await openapiWithOptions(code, {});
+      const output = await compileOpenAPIWithOptions(code, {});
       deepStrictEqual(Object.keys(output.definitions!), ["NotReferenced"]);
     });
 
     it("include version enum when set to 'include'", async () => {
-      const output = await openapiWithOptions(code, {
+      const output = await compileOpenAPIWithOptions(code, {
         "version-enum-strategy": "include",
       });
       deepStrictEqual(Object.keys(output.definitions!), ["NotReferenced", "Versions"]);
     });
 
     it("doesn't omit other enums", async () => {
-      const output = await openapiWithOptions(
+      const output = await compileOpenAPIWithOptions(
         `@service
         @versioned(Versions)
         namespace My {
@@ -269,7 +219,7 @@ op test(): void;
 
   describe("include-x-typespec-name", () => {
     it("doesn't include x-typespec-name by default", async () => {
-      const output = await openapiWithOptions(
+      const output = await compileOpenAPIWithOptions(
         `
         model Foo {names: string[]}
       `,
@@ -279,7 +229,7 @@ op test(): void;
     });
 
     it(`doesn't include x-typespec-name when option include-x-typespec-name: "never"`, async () => {
-      const output = await openapiWithOptions(
+      const output = await compileOpenAPIWithOptions(
         `
         model Foo {names: string[]}
       `,
@@ -289,7 +239,7 @@ op test(): void;
     });
 
     it(`include x-typespec-name when option include-x-typespec-name: "inline-only"`, async () => {
-      const output = await openapiWithOptions(
+      const output = await compileOpenAPIWithOptions(
         `
         model Foo {names: string[]}
       `,
@@ -303,31 +253,29 @@ op test(): void;
   describe("'emit-lro-options' option", () => {
     const lroCode = `
       @armProviderNamespace
-      @useDependency(Azure.Core.Versions.v1_0_Preview_2)
-      @useDependency(Azure.ResourceManager.Versions.v1_0_Preview_1)
-      namespace Microsoft.Test;
+              namespace Microsoft.Test;
 
       interface Operations extends Azure.ResourceManager.Operations {}
 
-      @doc("The state of the resource")
+      
       enum ResourceState {
        Succeeded,
        Canceled,
        Failed
      }
 
-      @doc("The widget properties")
+      
       model WidgetProperties {
-        @doc("I am a simple Resource Identifier")
+        
         simpleArmId: Azure.Core.armResourceIdentifier;
 
-        @doc("The provisioning State")
+        
         provisioningState: ResourceState;
       }
 
-      @doc("Foo resource")
+      
       model Widget is TrackedResource<WidgetProperties> {
-        @doc("Widget name")
+        
         @key("widgetName")
         @segment("widgets")
         @path
@@ -338,6 +286,7 @@ op test(): void;
         get is ArmResourceRead<Widget>;
         @Azure.Core.useFinalStateVia("azure-async-operation")
         createOrUpdate is ArmResourceCreateOrReplaceAsync<Widget, LroHeaders = Azure.Core.Foundations.RetryAfterHeader & ArmAsyncOperationHeader>;
+        #suppress "@typespec/http/deprecated-implicit-optionality" "For test"
         update is ArmResourcePatchSync<Widget, WidgetProperties>;
         delete is ArmResourceDeleteSync<Widget>;
         listByResourceGroup is ArmResourceListByParent<Widget>;
@@ -346,7 +295,7 @@ op test(): void;
       `;
 
     it("emits all x-ms-long-running-operation-options", async () => {
-      const output = await openapiWithOptions(lroCode, { "emit-lro-options": "all" });
+      const output = await compileOpenAPIWithOptions(lroCode, { "emit-lro-options": "all" });
       const itemPath =
         "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Test/widgets/{widgetName}";
       ok(output.paths[itemPath]);
@@ -359,7 +308,7 @@ op test(): void;
     });
 
     it("emits final-state-via by default", async () => {
-      const output = await openapiWithOptions(lroCode, {});
+      const output = await compileOpenAPIWithOptions(lroCode, {});
       const itemPath =
         "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Test/widgets/{widgetName}";
       ok(output.paths[itemPath]);
@@ -371,7 +320,9 @@ op test(): void;
     });
 
     it("emits final-state-via when configured", async () => {
-      const output = await openapiWithOptions(lroCode, { "emit-lro-options": "final-state-only" });
+      const output = await compileOpenAPIWithOptions(lroCode, {
+        "emit-lro-options": "final-state-only",
+      });
       const itemPath =
         "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Test/widgets/{widgetName}";
       ok(output.paths[itemPath]);
@@ -383,7 +334,7 @@ op test(): void;
     });
 
     it("suppress x-ms-long-running operation options when configured", async () => {
-      const output = await openapiWithOptions(lroCode, { "emit-lro-options": "none" });
+      const output = await compileOpenAPIWithOptions(lroCode, { "emit-lro-options": "none" });
       const itemPath =
         "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Test/widgets/{widgetName}";
       ok(output.paths[itemPath]);
@@ -394,35 +345,33 @@ op test(): void;
   });
 
   describe("'emit-common-types-schema' option", () => {
-    const commonTypesFolder = resolveVirtualPath("/common-types/resource-management");
-    const commonTypesPath = "common-types/resource-management/v3/types.json";
+    const commonTypesFolder = resolveVirtualPath("common-types/resource-management");
+    const commonTypesPath = "../common-types/resource-management/v3/types.json";
     const commonCode = `
       @armProviderNamespace
-      @useDependency(Azure.Core.Versions.v1_0_Preview_2)
-      @useDependency(Azure.ResourceManager.Versions.v1_0_Preview_1)
-      namespace Microsoft.Test;
+              namespace Microsoft.Test;
 
       interface Operations extends Azure.ResourceManager.Operations {}
 
-      @doc("The state of the resource")
+      
       enum ResourceState {
        Succeeded,
        Canceled,
        Failed
      }
 
-      @doc("The widget properties")
+      
       model WidgetProperties {
-        @doc("I am a simple Resource Identifier")
+        
         simpleArmId: Azure.Core.armResourceIdentifier;
 
-        @doc("The provisioning State")
+        
         provisioningState: ResourceState;
       }
 
-      @doc("Foo resource")
+      
       model Widget is TrackedResource<WidgetProperties> {
-        @doc("Widget name")
+        
         @key("widgetName")
         @segment("widgets")
         @path
@@ -433,6 +382,7 @@ op test(): void;
         get is ArmResourceRead<Widget>;
         @Azure.Core.useFinalStateVia("azure-async-operation")
         createOrUpdate is ArmResourceCreateOrReplaceAsync<Widget, LroHeaders = Azure.Core.Foundations.RetryAfterHeader & ArmAsyncOperationHeader>;
+        #suppress "@typespec/http/deprecated-implicit-optionality" "For test"
         update is ArmResourcePatchSync<Widget, WidgetProperties>;
         delete is ArmResourceDeleteSync<Widget>;
         listByResourceGroup is ArmResourceListByParent<Widget>;
@@ -441,7 +391,7 @@ op test(): void;
       `;
 
     it("emits only schema references with 'never' setting", async () => {
-      const output = await openapiWithOptions(commonCode, {
+      const output = await compileOpenAPIWithOptions(commonCode, {
         "emit-common-types-schema": "never",
         "arm-types-dir": commonTypesFolder,
       });
@@ -455,7 +405,7 @@ op test(): void;
     });
 
     it("emits an update schema for TrackedResource by default", async () => {
-      const output = await openapiWithOptions(commonCode, {
+      const output = await compileOpenAPIWithOptions(commonCode, {
         "arm-types-dir": commonTypesFolder,
       });
       ok(output.definitions);
@@ -468,7 +418,7 @@ op test(): void;
     });
 
     it("emits update schema when set to `for-visibility-changes`", async () => {
-      const output = await openapiWithOptions(commonCode, {
+      const output = await compileOpenAPIWithOptions(commonCode, {
         "emit-common-types-schema": "for-visibility-changes",
         "arm-types-dir": commonTypesFolder,
       });
@@ -484,7 +434,7 @@ op test(): void;
 
   describe("'examples-dir'", () => {
     it("emit diagnostic if examples-dir is not absolute", async () => {
-      const runner = await createAutorestTestRunner(undefined, {
+      const runner = await ApiTester.emit("@azure-tools/typespec-autorest", {
         "examples-dir": "./examples",
       });
 

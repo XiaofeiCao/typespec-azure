@@ -1,23 +1,29 @@
-import { definePackageFlags } from "@typespec/compiler";
 import { AzureResourceManagerDecorators } from "../generated-defs/Azure.ResourceManager.js";
 import { AzureResourceManagerLegacyDecorators } from "../generated-defs/Azure.ResourceManager.Legacy.js";
 import { $armCommonTypesVersion, $externalTypeRef } from "./common-types.js";
 import { $armLibraryNamespace, $armProviderNamespace, $useLibraryNamespace } from "./namespace.js";
 import {
+  $armOperationRoute,
   $armResourceAction,
+  $armResourceCheckExistence,
   $armResourceCollectionAction,
   $armResourceCreateOrUpdate,
   $armResourceDelete,
   $armResourceList,
   $armResourceRead,
   $armResourceUpdate,
+  $renamePathParameter,
 } from "./operations.js";
 import {
+  $armExternalType,
   $armProviderNameValue,
   $armResourceOperations,
   $armVirtualResource,
   $customAzureResource,
   $extensionResource,
+  $feature,
+  $featureOptions,
+  $features,
   $identifiers,
   $locationResource,
   $resourceBaseType,
@@ -49,6 +55,7 @@ export const $decorators = {
     armResourceUpdate: $armResourceUpdate,
     armResourceDelete: $armResourceDelete,
     armResourceList: $armResourceList,
+    armResourceCheckExistence: $armResourceCheckExistence,
     armResourceOperations: $armResourceOperations,
     armCommonTypesVersion: $armCommonTypesVersion,
     armVirtualResource: $armVirtualResource,
@@ -58,9 +65,11 @@ export const $decorators = {
   "Azure.ResourceManager.Legacy": {
     customAzureResource: $customAzureResource,
     externalTypeRef: $externalTypeRef,
+    armOperationRoute: $armOperationRoute,
+    armExternalType: $armExternalType,
+    renamePathParameter: $renamePathParameter,
+    feature: $feature,
+    features: $features,
+    featureOptions: $featureOptions,
   } satisfies AzureResourceManagerLegacyDecorators,
 };
-
-export const $flags = definePackageFlags({
-  decoratorArgMarshalling: "new",
-});
