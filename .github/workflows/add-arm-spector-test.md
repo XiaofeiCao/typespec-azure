@@ -155,11 +155,17 @@ If any of:
 → emit `noop` ("Issue is not scoped to ARM spector tests — taking no
 action.") and stop.
 
-## Decision Gate 3 — New folder or extend an existing one?
+## Decision Gate 3 — Create a new folder for the new case
+
+**Default: always create a new sibling folder for a new test case.**
+Do not extend or modify existing folders' scenarios. Keeping each new
+case isolated in its own folder makes scenarios easier to review,
+maintain, and remove independently.
 
 If you have reached this point, inventory the existing ARM scenario
 folders under
-`packages/azure-http-specs/specs/azure/resource-manager/`:
+`packages/azure-http-specs/specs/azure/resource-manager/` (for
+reference and naming-convention purposes only):
 
 - `common-properties`
 - `large-header`
@@ -170,24 +176,25 @@ folders under
 - `operation-templates`
 - `resources`
 
-For each folder, briefly read its `main.tsp` (and `client.tsp` if
-present) to understand its theme and existing scenarios.
+Briefly read one or two of the closest existing folders' `main.tsp`
+(and `client.tsp` if present) to understand the conventions you must
+follow — **not** to extend them.
 
-Then choose **one** of:
+Then:
 
-- **Extend an existing folder** when the requested scenario is a
-  natural extension of an existing theme (for example, "add a new
-  scenario testing a singleton resource with X" naturally extends
-  `resources/singleton.tsp`). Add new operations / scenarios to the
-  existing `main.tsp` (or appropriate sub-file) and update the
-  matching `mockapi.ts`.
-- **Create a new sibling folder** when the scenario represents a
-  genuinely new ARM concept that does not fit anywhere existing. Use a
-  short, kebab-case folder name that describes the feature area
-  (e.g. `resources`, `non-resource`). Inside, create `main.tsp` and
-  `mockapi.ts` following the conventions used by the existing folders.
+- **Create a new sibling folder** with a short, kebab-case folder name
+  that describes the feature area being tested. Inside, create
+  `main.tsp` and `mockapi.ts` following the conventions used by the
+  existing folders.
+- **Do not** add new operations or scenarios to existing folders'
+  `main.tsp` / `mockapi.ts`, even when the requested scenario looks
+  thematically similar to an existing folder. Prefer a new folder.
+- The only acceptable exception is when the triggering issue
+  **explicitly** asks to extend a specific existing scenario file by
+  name. In that case, state the exception and the issue quote that
+  justifies it before editing.
 
-Briefly state your choice and reasoning before editing.
+Briefly state the new folder name and reasoning before editing.
 
 ## Implementation Rules
 
