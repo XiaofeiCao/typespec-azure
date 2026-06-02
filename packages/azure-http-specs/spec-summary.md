@@ -2256,6 +2256,83 @@ Expected response body:
 }
 ```
 
+### Azure_ResourceManager_CustomResource_CustomResourceOperations_create
+
+- Endpoint: `put https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.CustomResource/customResources/{resourceName}`
+
+PUT operation for a custom Azure resource marked with @customAzureResource.
+Expected path: /subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.CustomResource/customResources/test
+Expected query parameter: api-version=2023-12-01-preview
+
+Expected request body:
+
+```json
+{
+  "name": "test",
+  "description": "valid"
+}
+```
+
+Expected response body:
+
+```json
+{
+  "name": "test",
+  "description": "valid",
+  "provisioningState": "Succeeded"
+}
+```
+
+### Azure_ResourceManager_CustomResource_CustomResourceOperations_delete
+
+- Endpoint: `delete https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.CustomResource/customResources/{resourceName}`
+
+DELETE operation for a custom Azure resource marked with @customAzureResource.
+Expected path: /subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.CustomResource/customResources/test
+Expected query parameter: api-version=2023-12-01-preview
+
+Expected response status code: 204
+
+### Azure_ResourceManager_CustomResource_CustomResourceOperations_get
+
+- Endpoint: `get https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.CustomResource/customResources/{resourceName}`
+
+GET operation for a custom Azure resource marked with @customAzureResource.
+Expected path: /subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.CustomResource/customResources/test
+Expected query parameter: api-version=2023-12-01-preview
+
+Expected response body:
+
+```json
+{
+  "name": "test",
+  "description": "valid",
+  "provisioningState": "Succeeded"
+}
+```
+
+### Azure_ResourceManager_CustomResource_CustomResourceOperations_list
+
+- Endpoint: `get https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.CustomResource/customResources`
+
+LIST operation for custom Azure resources marked with @customAzureResource.
+Expected path: /subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.CustomResource/customResources
+Expected query parameter: api-version=2023-12-01-preview
+
+Expected response body:
+
+```json
+{
+  "value": [
+    {
+      "name": "test",
+      "description": "valid",
+      "provisioningState": "Succeeded"
+    }
+  ]
+}
+```
+
 ### Azure_ResourceManager_LargeHeader_LargeHeaders_two6k
 
 - Endpoint: `post https://management.azure.com`
