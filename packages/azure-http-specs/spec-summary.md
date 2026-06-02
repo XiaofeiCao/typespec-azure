@@ -2330,6 +2330,256 @@ Expected response body:
 }
 ```
 
+### Azure_ResourceManager_LegacyOperations_ResourceGroupOperations_createOrUpdate
+
+- Endpoint: `put https://management.azure.com`
+
+Resource PUT operation at resource group level using Legacy operations with multiple routes.
+
+Expected verb: PUT
+Expected path: /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Azure.ResourceManager.LegacyOperations/configurationStores/store1
+Expected query parameter: api-version=2023-12-01-preview
+Expected request body:
+
+```json
+{
+  "location": "eastus",
+  "properties": {
+    "description": "A valid configuration store"
+  }
+}
+```
+
+Expected status code: 200
+Expected response body:
+
+```json
+{
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Azure.ResourceManager.LegacyOperations/configurationStores/store1",
+  "name": "store1",
+  "type": "Azure.ResourceManager.LegacyOperations/configurationStores",
+  "location": "eastus",
+  "properties": {
+    "description": "A valid configuration store",
+    "provisioningState": "Succeeded"
+  },
+  "systemData": {
+    "createdBy": "AzureSDK",
+    "createdByType": "User",
+    "createdAt": <any date>,
+    "lastModifiedBy": "AzureSDK",
+    "lastModifiedAt": <any date>,
+    "lastModifiedByType": "User"
+  }
+}
+```
+
+### Azure_ResourceManager_LegacyOperations_ResourceGroupOperations_delete
+
+- Endpoint: `delete https://management.azure.com`
+
+Resource DELETE operation at resource group level using Legacy operations with multiple routes.
+
+Expected verb: DELETE
+Expected path: /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Azure.ResourceManager.LegacyOperations/configurationStores/store1
+Expected query parameter: api-version=2023-12-01-preview
+Expected status code: 200
+
+### Azure_ResourceManager_LegacyOperations_ResourceGroupOperations_get
+
+- Endpoint: `get https://management.azure.com`
+
+Resource GET operation at resource group level using Legacy operations with multiple routes.
+
+Expected verb: GET
+Expected path: /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Azure.ResourceManager.LegacyOperations/configurationStores/store1
+Expected query parameter: api-version=2023-12-01-preview
+Expected status code: 200
+Expected response body:
+
+```json
+{
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Azure.ResourceManager.LegacyOperations/configurationStores/store1",
+  "name": "store1",
+  "type": "Azure.ResourceManager.LegacyOperations/configurationStores",
+  "location": "eastus",
+  "properties": {
+    "description": "A valid configuration store",
+    "provisioningState": "Succeeded"
+  },
+  "systemData": {
+    "createdBy": "AzureSDK",
+    "createdByType": "User",
+    "createdAt": <any date>,
+    "lastModifiedBy": "AzureSDK",
+    "lastModifiedAt": <any date>,
+    "lastModifiedByType": "User"
+  }
+}
+```
+
+### Azure_ResourceManager_LegacyOperations_ResourceGroupOperations_listByResourceGroup
+
+- Endpoint: `get https://management.azure.com`
+
+Resource LIST operation at resource group level using Legacy operations with multiple routes.
+
+Expected verb: GET
+Expected path: /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Azure.ResourceManager.LegacyOperations/configurationStores
+Expected query parameter: api-version=2023-12-01-preview
+Expected status code: 200
+Expected response body:
+
+```json
+{
+  "value": [
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Azure.ResourceManager.LegacyOperations/configurationStores/store1",
+      "name": "store1",
+      "type": "Azure.ResourceManager.LegacyOperations/configurationStores",
+      "location": "eastus",
+      "properties": {
+        "description": "A valid configuration store",
+        "provisioningState": "Succeeded"
+      },
+      "systemData": {
+        "createdBy": "AzureSDK",
+        "createdByType": "User",
+        "createdAt": <any date>,
+        "lastModifiedBy": "AzureSDK",
+        "lastModifiedAt": <any date>,
+        "lastModifiedByType": "User"
+      }
+    }
+  ]
+}
+```
+
+### Azure_ResourceManager_LegacyOperations_SubscriptionOperations_createOrUpdate
+
+- Endpoint: `put https://management.azure.com`
+
+Resource PUT operation at subscription level using Legacy operations with multiple routes.
+
+Expected verb: PUT
+Expected path: /subscriptions/00000000-0000-0000-0000-000000000000/providers/Azure.ResourceManager.LegacyOperations/configurationStores/store1
+Expected query parameter: api-version=2023-12-01-preview
+Expected request body:
+
+```json
+{
+  "location": "eastus",
+  "properties": {
+    "description": "A valid configuration store"
+  }
+}
+```
+
+Expected status code: 200
+Expected response body:
+
+```json
+{
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/providers/Azure.ResourceManager.LegacyOperations/configurationStores/store1",
+  "name": "store1",
+  "type": "Azure.ResourceManager.LegacyOperations/configurationStores",
+  "location": "eastus",
+  "properties": {
+    "description": "A valid configuration store",
+    "provisioningState": "Succeeded"
+  },
+  "systemData": {
+    "createdBy": "AzureSDK",
+    "createdByType": "User",
+    "createdAt": <any date>,
+    "lastModifiedBy": "AzureSDK",
+    "lastModifiedAt": <any date>,
+    "lastModifiedByType": "User"
+  }
+}
+```
+
+### Azure_ResourceManager_LegacyOperations_SubscriptionOperations_delete
+
+- Endpoint: `delete https://management.azure.com`
+
+Resource DELETE operation at subscription level using Legacy operations with multiple routes.
+
+Expected verb: DELETE
+Expected path: /subscriptions/00000000-0000-0000-0000-000000000000/providers/Azure.ResourceManager.LegacyOperations/configurationStores/store1
+Expected query parameter: api-version=2023-12-01-preview
+Expected status code: 200
+
+### Azure_ResourceManager_LegacyOperations_SubscriptionOperations_get
+
+- Endpoint: `get https://management.azure.com`
+
+Resource GET operation at subscription level using Legacy operations with multiple routes.
+
+Expected verb: GET
+Expected path: /subscriptions/00000000-0000-0000-0000-000000000000/providers/Azure.ResourceManager.LegacyOperations/configurationStores/store1
+Expected query parameter: api-version=2023-12-01-preview
+Expected status code: 200
+Expected response body:
+
+```json
+{
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/providers/Azure.ResourceManager.LegacyOperations/configurationStores/store1",
+  "name": "store1",
+  "type": "Azure.ResourceManager.LegacyOperations/configurationStores",
+  "location": "eastus",
+  "properties": {
+    "description": "A valid configuration store",
+    "provisioningState": "Succeeded"
+  },
+  "systemData": {
+    "createdBy": "AzureSDK",
+    "createdByType": "User",
+    "createdAt": <any date>,
+    "lastModifiedBy": "AzureSDK",
+    "lastModifiedAt": <any date>,
+    "lastModifiedByType": "User"
+  }
+}
+```
+
+### Azure_ResourceManager_LegacyOperations_SubscriptionOperations_listBySubscription
+
+- Endpoint: `get https://management.azure.com`
+
+Resource LIST operation at subscription level using Legacy operations with multiple routes.
+
+Expected verb: GET
+Expected path: /subscriptions/00000000-0000-0000-0000-000000000000/providers/Azure.ResourceManager.LegacyOperations/configurationStores
+Expected query parameter: api-version=2023-12-01-preview
+Expected status code: 200
+Expected response body:
+
+```json
+{
+  "value": [
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/providers/Azure.ResourceManager.LegacyOperations/configurationStores/store1",
+      "name": "store1",
+      "type": "Azure.ResourceManager.LegacyOperations/configurationStores",
+      "location": "eastus",
+      "properties": {
+        "description": "A valid configuration store",
+        "provisioningState": "Succeeded"
+      },
+      "systemData": {
+        "createdBy": "AzureSDK",
+        "createdByType": "User",
+        "createdAt": <any date>,
+        "lastModifiedBy": "AzureSDK",
+        "lastModifiedAt": <any date>,
+        "lastModifiedByType": "User"
+      }
+    }
+  ]
+}
+```
+
 ### Azure_ResourceManager_MethodSubscriptionId_MixedSubscriptionPlacement_ResourceGroupResourceOperations_delete
 
 - Endpoint: `delete https://management.azure.com`
