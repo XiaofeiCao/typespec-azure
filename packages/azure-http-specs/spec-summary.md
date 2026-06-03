@@ -2330,6 +2330,157 @@ Expected response body:
 }
 ```
 
+### Azure_ResourceManager_ManagementGroup_ManagementGroupChildResources_createOrUpdate
+
+- Endpoint: `put https://management.azure.com`
+
+Resource PUT operation at management group scope.
+Expected path: /providers/Microsoft.Management/managementGroups/test-mg/providers/Azure.ResourceManager.ManagementGroup/managementGroupChildResources/resource
+Expected query parameter: api-version=2023-12-01-preview
+
+Expected request body:
+
+```json
+{
+  "properties": {
+    "description": "valid"
+  }
+}
+```
+
+Expected response body:
+
+```json
+{
+  "id": "/providers/Microsoft.Management/managementGroups/test-mg/providers/Azure.ResourceManager.ManagementGroup/managementGroupChildResources/resource",
+  "name": "resource",
+  "type": "Azure.ResourceManager.ManagementGroup/managementGroupChildResources",
+  "properties":{
+    "description": "valid",
+    "provisioningState": "Succeeded"
+  },
+  "systemData": {
+    "createdBy": "AzureSDK",
+    "createdByType": "User",
+    "createdAt": <any date>,
+    "lastModifiedBy": "AzureSDK",
+    "lastModifiedAt": <any date>,
+    "lastModifiedByType": "User"
+  }
+}
+```
+
+### Azure_ResourceManager_ManagementGroup_ManagementGroupChildResources_delete
+
+- Endpoint: `delete https://management.azure.com`
+
+Resource DELETE operation at management group scope.
+Expected path: /providers/Microsoft.Management/managementGroups/test-mg/providers/Azure.ResourceManager.ManagementGroup/managementGroupChildResources/resource
+Expected query parameter: api-version=2023-12-01-preview
+Expected response status code: 204
+
+### Azure_ResourceManager_ManagementGroup_ManagementGroupChildResources_get
+
+- Endpoint: `get https://management.azure.com`
+
+Resource GET operation at management group scope.
+Expected path: /providers/Microsoft.Management/managementGroups/test-mg/providers/Azure.ResourceManager.ManagementGroup/managementGroupChildResources/resource
+Expected query parameter: api-version=2023-12-01-preview
+
+Expected response body:
+
+```json
+{
+  "id": "/providers/Microsoft.Management/managementGroups/test-mg/providers/Azure.ResourceManager.ManagementGroup/managementGroupChildResources/resource",
+  "name": "resource",
+  "type": "Azure.ResourceManager.ManagementGroup/managementGroupChildResources",
+  "properties":{
+    "description": "valid",
+    "provisioningState": "Succeeded"
+  },
+  "systemData": {
+    "createdBy": "AzureSDK",
+    "createdByType": "User",
+    "createdAt": <any date>,
+    "lastModifiedBy": "AzureSDK",
+    "lastModifiedAt": <any date>,
+    "lastModifiedByType": "User"
+  }
+}
+```
+
+### Azure_ResourceManager_ManagementGroup_ManagementGroupChildResources_listByManagementGroup
+
+- Endpoint: `get https://management.azure.com`
+
+Resource LIST operation at management group scope.
+Expected path: /providers/Microsoft.Management/managementGroups/test-mg/providers/Azure.ResourceManager.ManagementGroup/managementGroupChildResources
+Expected query parameter: api-version=2023-12-01-preview
+
+Expected response body:
+
+```json
+{
+  "value": [{
+    "id": "/providers/Microsoft.Management/managementGroups/test-mg/providers/Azure.ResourceManager.ManagementGroup/managementGroupChildResources/resource",
+    "name": "resource",
+    "type": "Azure.ResourceManager.ManagementGroup/managementGroupChildResources",
+    "properties":{
+      "description": "valid",
+      "provisioningState": "Succeeded"
+    },
+    "systemData": {
+      "createdBy": "AzureSDK",
+      "createdByType": "User",
+      "createdAt": <any date>,
+      "lastModifiedBy": "AzureSDK",
+      "lastModifiedAt": <any date>,
+      "lastModifiedByType": "User"
+    }
+  }]
+}
+```
+
+### Azure_ResourceManager_ManagementGroup_ManagementGroupChildResources_update
+
+- Endpoint: `patch https://management.azure.com`
+
+Resource PATCH operation at management group scope.
+Expected path: /providers/Microsoft.Management/managementGroups/test-mg/providers/Azure.ResourceManager.ManagementGroup/managementGroupChildResources/resource
+Expected query parameter: api-version=2023-12-01-preview
+
+Expected request body:
+
+```json
+{
+  "properties": {
+    "description": "valid2"
+  }
+}
+```
+
+Expected response body:
+
+```json
+{
+  "id": "/providers/Microsoft.Management/managementGroups/test-mg/providers/Azure.ResourceManager.ManagementGroup/managementGroupChildResources/resource",
+  "name": "resource",
+  "type": "Azure.ResourceManager.ManagementGroup/managementGroupChildResources",
+  "properties":{
+    "description": "valid2",
+    "provisioningState": "Succeeded"
+  },
+  "systemData": {
+    "createdBy": "AzureSDK",
+    "createdByType": "User",
+    "createdAt": <any date>,
+    "lastModifiedBy": "AzureSDK",
+    "lastModifiedAt": <any date>,
+    "lastModifiedByType": "User"
+  }
+}
+```
+
 ### Azure_ResourceManager_MethodSubscriptionId_MixedSubscriptionPlacement_ResourceGroupResourceOperations_delete
 
 - Endpoint: `delete https://management.azure.com`
