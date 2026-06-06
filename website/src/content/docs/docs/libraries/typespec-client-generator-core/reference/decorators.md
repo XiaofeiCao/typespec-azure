@@ -1117,7 +1117,7 @@ Add usage for models/enums.
 A model/enum's default usage info is always calculated by the operations that use it.
 You can use this decorator to add additional usage info.
 When setting usage for namespaces,
-the usage info will be propagated to the models defined in the namespace.
+the usage info will be propagated recursively to all models defined in the namespace and any nested sub-namespaces.
 If the model has a usage override, the model override takes precedence.
 For example, with operation definition `op test(): OutputModel`,
 the model `OutputModel` has default usage `Usage.output`.
@@ -1192,6 +1192,27 @@ model Origin {
 
 @get
 op getModel(): Fish;
+```
+
+##### Propagation of usage to all models in a namespace and nested sub-namespaces
+
+```typespec
+// `@usage` applied to a namespace propagates recursively to all models
+// defined in that namespace and any nested sub-namespaces.
+// Both `NamespaceModel` and `NestedNamespaceModel` will have Usage.input | Usage.json.
+@usage(Usage.input | Usage.json)
+@access(Access.public)
+namespace MyModels {
+  model NamespaceModel {
+    name: string;
+  }
+
+  namespace Nested {
+    model NestedNamespaceModel {
+      value: string;
+    }
+  }
+}
 ```
 
 ### `@useSystemTextJsonConverter` {#@Azure.ClientGenerator.Core.useSystemTextJsonConverter}
