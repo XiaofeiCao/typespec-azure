@@ -15,9 +15,13 @@ The current (non-deprecated) envelope property spread models are:
 
 The deprecated aliases are defined in `lib/models.tsp` with `#deprecated` markers.
 
+## Envelope Properties Placement
+
+All envelope properties MUST be spread on the **resource model** itself (the `is TrackedResource<...>` / `ProxyResource<...>` model), NOT on the properties model. The `common-properties` sample demonstrates all recommended envelope properties together on the resource model.
+
 ## Resource Name Pattern
 
-Always use `...ResourceNameParameter<ModelName>` in resource model definitions instead of manual `@key/@segment/@visibility/@path name` patterns. The template auto-generates camelCased key names and pluralized segment names from the model name. Custom key/segment names can be overridden via `KeyName` and `SegmentName` template parameters.
+Always use `...ResourceNameParameter<ModelName>` in resource model definitions instead of manual `@key/@segment/@visibility/@path name` patterns. The template auto-generates camelCased key names and pluralized segment names from the model name. Custom key/segment names can be overridden via `KeyName` and `SegmentName` template parameters. The `NamePattern` template parameter controls the regex pattern for the name (default: `"^[a-zA-Z0-9-]{3,24}$"`) — omit it in docs when using the default value.
 
 ## Resource Model Naming
 
