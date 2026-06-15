@@ -12,12 +12,24 @@ The current (non-deprecated) envelope property spread models are:
 - `...ManagedServiceIdentityProperty` (not `ManagedServiceIdentity`)
 - `...ManagedSystemAssignedIdentityProperty` (not `ManagedSystemAssignedIdentity`)
 - `...ExtendedLocationProperty`
+- `...AvailabilityZonesProperty`
+- `...EncryptionProperty`
+
+All envelope properties are spread into the **resource model** (not the properties model). The `resource-type.md` how-to guide documents all of them under "Adding Optional Standard Envelope Properties".
 
 The deprecated aliases are defined in `lib/models.tsp` with `#deprecated` markers.
 
 ## Resource Name Pattern
 
 Always use `...ResourceNameParameter<ModelName>` in resource model definitions instead of manual `@key/@segment/@visibility/@path name` patterns. The template auto-generates camelCased key names and pluralized segment names from the model name. Custom key/segment names can be overridden via `KeyName` and `SegmentName` template parameters.
+
+The full template signature is:
+
+```
+ResourceNameParameter<Resource, KeyName = "", SegmentName = "", NamePattern = "^[a-zA-Z0-9-]{3,24}$", Type = string>
+```
+
+Since `NamePattern` defaults to `"^[a-zA-Z0-9-]{3,24}$"`, do NOT pass it explicitly when the value equals the default. Only pass `NamePattern` when you need a different regex pattern.
 
 ## Resource Model Naming
 
