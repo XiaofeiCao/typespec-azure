@@ -469,6 +469,10 @@ In addition to the resource-specific property bag, a resource may configure on o
 - **Plan**: A standard mechanism for configuring MarketPlace billing plans for a resource.
 - **ETags**: A standard mechanism for managing concurrent operations over the resource.
 - **ResourceKind**: A standard mechanism for specifying a type of user experience in the portal.
+- **ManagedBy**: Indicating that the resource is managed by another resource.
+- **ExtendedLocation**: Deploying the resource to an extended location such as an edge zone.
+- **AvailabilityZones**: Specifying the availability zones the resource is deployed into.
+- **Encryption**: Configuring customer-managed key (CMK) encryption for the resource.
 
 ### Managed Identity
 
@@ -558,6 +562,39 @@ model Employee is TrackedResource<EmployeeProperties> {
 ```
 
 For more information on supporting 'ManagedBy', see [ManagedBy API Contract](https://eng.ms/docs/products/arm/api_contracts/managedby)
+
+### ExtendedLocation
+
+Support for deploying the resource to an extended location, such as an Azure Edge Zone. To enable extended location support, add the `ExtendedLocationProperty` envelope property to the resource definition:
+
+```typespec
+model Employee is TrackedResource<EmployeeProperties> {
+  ...ResourceNameParameter<Employee>;
+  ...ExtendedLocationProperty;
+}
+```
+
+### AvailabilityZones
+
+Support for specifying the availability zones the resource is deployed into. To enable availability zone support, add the `AvailabilityZonesProperty` envelope property to the resource definition:
+
+```typespec
+model Employee is TrackedResource<EmployeeProperties> {
+  ...ResourceNameParameter<Employee>;
+  ...AvailabilityZonesProperty;
+}
+```
+
+### Encryption
+
+Support for customer-managed key (CMK) encryption configuration for the resource. To enable encryption support, add the `EncryptionProperty` envelope property to the resource definition:
+
+```typespec
+model Employee is TrackedResource<EmployeeProperties> {
+  ...ResourceNameParameter<Employee>;
+  ...EncryptionProperty;
+}
+```
 
 ## Reference
 
