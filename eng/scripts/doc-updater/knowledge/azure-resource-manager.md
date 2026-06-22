@@ -15,6 +15,8 @@ The current (non-deprecated) envelope property spread models are:
 
 The deprecated aliases are defined in `lib/models.tsp` with `#deprecated` markers.
 
+Envelope properties MUST be spread into the **resource model** (not the properties bag model). The canonical sample demonstrating this is `packages/samples/specs/resource-manager/resource-common-properties/common-properties/main.tsp`.
+
 ## Resource Name Pattern
 
 Always use `...ResourceNameParameter<ModelName>` in resource model definitions instead of manual `@key/@segment/@visibility/@path name` patterns. The template auto-generates camelCased key names and pluralized segment names from the model name. Custom key/segment names can be overridden via `KeyName` and `SegmentName` template parameters.
