@@ -421,16 +421,15 @@ model ManagedByProperty {
 /** Please use the spread model EncryptionProperty */
 alias Encryption = EncryptionProperty;
 /**
- * Model used only to spread in the `encryption` envelope property for a resource.
+ * All encryption configuration for a resource.
  * @example
  *
  * ```typespec
  * model Foo is TrackedResource<FooProperties> {
- *   ...Encryption;
+ *   ...EncryptionProperty;
  * }
  * ```
  */
-/** All encryption configuration for a resource. */
 model EncryptionProperty {
   /** All encryption configuration for a resource. */
   encryption: EncryptionConfiguration;

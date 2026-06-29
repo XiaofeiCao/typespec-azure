@@ -12,6 +12,8 @@ The current (non-deprecated) envelope property spread models are:
 - `...ManagedServiceIdentityProperty` (not `ManagedServiceIdentity`)
 - `...ManagedSystemAssignedIdentityProperty` (not `ManagedSystemAssignedIdentity`)
 - `...ExtendedLocationProperty`
+- `...AvailabilityZonesProperty`
+- `...EncryptionProperty` (not `Encryption`; note: this is typically spread in the properties bag, not the resource envelope)
 
 The deprecated aliases are defined in `lib/models.tsp` with `#deprecated` markers.
 

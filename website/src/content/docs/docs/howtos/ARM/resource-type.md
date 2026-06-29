@@ -462,13 +462,16 @@ Finally, when your _rp-specific property bag_ contains an array of complex prope
 
 ## Adding Optional Standard Envelope Properties
 
-In addition to the resource-specific property bag, a resource may configure on or more standard ARM features through the use of standard properties in the _ARM Envelope_. Standard features configured in the envelope include:
+In addition to the resource-specific property bag, a resource may configure one or more standard ARM features through the use of standard properties in the _ARM Envelope_. Standard features configured in the envelope include:
 
 - **Managed Identity**: Associating a managed identity with the resource to authorize actions taken by this resource on other resources.
 - **SKU**: A standard mechanism for configuring levels of service for a resource.
 - **Plan**: A standard mechanism for configuring MarketPlace billing plans for a resource.
 - **ETags**: A standard mechanism for managing concurrent operations over the resource.
 - **ResourceKind**: A standard mechanism for specifying a type of user experience in the portal.
+- **ManagedBy**: Indicating that the resource is managed by another Azure resource.
+- **ExtendedLocation**: Enabling support for deploying the resource to extended locations such as Edge Zones.
+- **AvailabilityZones**: Enabling support for ARM availability zones.
 
 ### Managed Identity
 
@@ -558,6 +561,28 @@ model Employee is TrackedResource<EmployeeProperties> {
 ```
 
 For more information on supporting 'ManagedBy', see [ManagedBy API Contract](https://eng.ms/docs/products/arm/api_contracts/managedby)
+
+### ExtendedLocation
+
+Support for deploying the resource to extended locations such as Azure Edge Zones. To enable extended location support, add the `ExtendedLocationProperty` envelope property to the resource definition:
+
+```typespec
+model Employee is TrackedResource<EmployeeProperties> {
+  ...ResourceNameParameter<Employee>;
+  ...ExtendedLocationProperty;
+}
+```
+
+### AvailabilityZones
+
+Support for ARM availability zones. To enable availability zone support, add the `AvailabilityZonesProperty` envelope property to the resource definition:
+
+```typespec
+model Employee is TrackedResource<EmployeeProperties> {
+  ...ResourceNameParameter<Employee>;
+  ...AvailabilityZonesProperty;
+}
+```
 
 ## Reference
 
