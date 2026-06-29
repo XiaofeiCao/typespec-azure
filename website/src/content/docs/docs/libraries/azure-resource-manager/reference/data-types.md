@@ -84,10 +84,10 @@ model Azure.ResourceManager.ArmAsyncOperationHeader<StatusMonitor, UrlValue, Fin
 
 ```typespec
 op changeWidget is ArmResourceActionAsync<
-  WidgetResource,
-  WidgetResourceRequest,
-  WidgetResourceResponse,
-  LroHeaders = ArmAsyncOperationHeader<FinalResult = WidgetResource>
+  Widget,
+  WidgetRequest,
+  WidgetResponse,
+  LroHeaders = ArmAsyncOperationHeader<FinalResult = Widget>
 >;
 ```
 
@@ -610,7 +610,6 @@ model FooProperties {
 
 ### `EncryptionProperty` {#Azure.ResourceManager.EncryptionProperty}
 
-Model used only to spread in the `encryption` envelope property for a resource.
 All encryption configuration for a resource.
 
 ```typespec
@@ -621,7 +620,7 @@ model Azure.ResourceManager.EncryptionProperty
 
 ```typespec
 model Foo is TrackedResource<FooProperties> {
-  ...Encryption;
+  ...EncryptionProperty;
 }
 ```
 
