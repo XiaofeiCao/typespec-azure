@@ -15,6 +15,10 @@ The current (non-deprecated) envelope property spread models are:
 
 The deprecated aliases are defined in `lib/models.tsp` with `#deprecated` markers.
 
+## Envelope Properties Placement
+
+All envelope properties must be spread on the **resource model** (e.g., `model Widget is TrackedResource<WidgetProperties> { ...EntityTagProperty; }`), never inside the properties model. The `resource-common-properties/common-properties/` sample demonstrates ALL recommended envelope properties together on one resource model. The howto `resource-type.md` documents each one with its own subsection under "Adding Optional Standard Envelope Properties".
+
 ## Resource Name Pattern
 
 Always use `...ResourceNameParameter<ModelName>` in resource model definitions instead of manual `@key/@segment/@visibility/@path name` patterns. The template auto-generates camelCased key names and pluralized segment names from the model name. Custom key/segment names can be overridden via `KeyName` and `SegmentName` template parameters.
@@ -59,6 +63,7 @@ Canonical ARM samples are under `packages/samples/specs/resource-manager/`:
 - `resource-types/private-endpoints/` — PrivateEndpointConnection
 - `resource-types/private-links/` — PrivateLink
 - `resource-types/nsp/` — Network Security Perimeter
+- `resource-common-properties/common-properties/` — All recommended envelope properties
 
 Old paths like `dynatrace/`, `tenantResource/`, `arm-scenarios/singleton/`, `operationsTest/` no longer exist.
 
