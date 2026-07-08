@@ -183,7 +183,7 @@ each individual repo as you would any other.
 
 ## Testing, formatting, and linting
 
-Testing, formatting, and linting run at the repo root via workspace-level tools (vitest, prettier, eslint). Packages that need additional tooling define `:extra` scripts run via turbo.
+Testing, formatting, and linting run at the repo root via workspace-level tools (vitest, prettier, oxlint). Packages that need additional tooling define `:extra` scripts run via turbo.
 
 ### Package examples
 
@@ -241,7 +241,7 @@ The package also needs a `vitest.config.ts` — the root vitest workspace config
 | `pnpm test`         | vitest (workspace) + `turbo run test:extra`       |
 | `pnpm format`       | prettier (whole repo) + `turbo run format:extra`  |
 | `pnpm format:check` | prettier (check) + `turbo run format:extra:check` |
-| `pnpm lint`         | eslint (whole repo) + `turbo run lint:extra`      |
+| `pnpm lint`         | oxlint (whole repo) + `turbo run lint:extra`      |
 
 Vitest workspace mode runs all vitest-based packages in a single process with relative error paths. Turbo handles the `:extra` tasks in parallel for packages that define them — if no package defines them, the turbo step is a no-op.
 
