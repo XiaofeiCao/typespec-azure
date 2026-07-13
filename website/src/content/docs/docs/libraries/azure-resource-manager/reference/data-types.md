@@ -84,10 +84,10 @@ model Azure.ResourceManager.ArmAsyncOperationHeader<StatusMonitor, UrlValue, Fin
 
 ```typespec
 op changeWidget is ArmResourceActionAsync<
-  WidgetResource,
-  WidgetResourceRequest,
-  WidgetResourceResponse,
-  LroHeaders = ArmAsyncOperationHeader<FinalResult = WidgetResource>
+  Widget,
+  WidgetRequest,
+  WidgetResponse,
+  LroHeaders = ArmAsyncOperationHeader<FinalResult = Widget>
 >;
 ```
 
