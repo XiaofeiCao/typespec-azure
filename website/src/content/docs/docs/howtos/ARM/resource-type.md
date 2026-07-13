@@ -469,6 +469,8 @@ In addition to the resource-specific property bag, a resource may configure on o
 - **Plan**: A standard mechanism for configuring MarketPlace billing plans for a resource.
 - **ETags**: A standard mechanism for managing concurrent operations over the resource.
 - **ResourceKind**: A standard mechanism for specifying a type of user experience in the portal.
+- **ManagedBy**: Indicating that this resource is managed by another Azure resource.
+- **Extended Location**: Supporting extended locations such as custom locations on Azure Arc.
 
 ### Managed Identity
 
@@ -558,6 +560,17 @@ model Employee is TrackedResource<EmployeeProperties> {
 ```
 
 For more information on supporting 'ManagedBy', see [ManagedBy API Contract](https://eng.ms/docs/products/arm/api_contracts/managedby)
+
+### Extended Location
+
+Support for extended locations such as custom locations on Azure Arc. To add extended location support to the resource, add the `ExtendedLocationProperty` envelope property to the resource definition:
+
+```typespec
+model Employee is TrackedResource<EmployeeProperties> {
+  ...ResourceNameParameter<Employee>;
+  ...ExtendedLocationProperty;
+}
+```
 
 ## Reference
 
