@@ -163,3 +163,11 @@ Strategy for applying XML serialization metadata to schemas.
 **Type:** `"legacy-feature-files"`
 
 Determines whether output should be split into multiple files. The only supported option for splitting is "legacy-feature-files", which uses the typespec-azure-resource-manager `@feature` decorators to split into output files based on feature.
+
+### `service-yaml`
+
+**Type:** `"auto" | "always" | "never"`
+
+**Default:** `"auto"`
+
+Controls emission of a `service.yaml` manifest at the project root. `"auto"` (default) emits it only if the file already exists, `"always"` always emits it, `"never"` disables it. When an existing file is present it is updated in place, preserving comments and unrelated keys.
