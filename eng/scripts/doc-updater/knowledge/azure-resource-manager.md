@@ -93,6 +93,20 @@ Old paths like `dynatrace/`, `tenantResource/`, `arm-scenarios/singleton/`, `ope
 
 The `@service` decorator should NOT include a `version` parameter (version comes from `@versioned` when used). The guide uses `ArmCustomPatchSync` (not ArmTagsPatch) because that is the recommendation, based on the requirements of the ARM RPC (Resource Provider Contract).
 
+## Envelope Property Placement
+
+All envelope properties (`EntityTagProperty`, `ExtendedLocationProperty`, `ManagedByProperty`, `ManagedServiceIdentityProperty`, `ManagedSystemAssignedIdentityProperty`, `ResourceKindProperty`, `ResourcePlanProperty`, `ResourceSkuProperty`) must be spread into the **resource model**, NOT the properties model. The one exception is `EncryptionProperty`, which is spread into the properties model.
+
+The canonical sample demonstrating this is `packages/samples/specs/resource-manager/resource-common-properties/common-properties/main.tsp`.
+
+## Envelope Properties in Howto Guide
+
+The `resource-type.md` howto guide's "Adding Optional Standard Envelope Properties" section must list **all** non-deprecated envelope properties. As of 2026-07, `ExtendedLocationProperty` and `ManagedBy` were missing from the overview bullet list and `ExtendedLocationProperty` had no subsection — both were added.
+
+## Doc Comment Examples Should Follow Naming Conventions
+
+Doc comment examples in `.tsp` files (e.g., `@example` blocks) should use model names without a `Resource` suffix (e.g., `Widget` not `WidgetResource`, `WidgetRequest` not `WidgetResourceRequest`). The `lib/responses.tsp` `ArmAsyncOperationHeader` example was corrected from `WidgetResource` to `Widget`.
+
 ## Feedback Corrections Applied
 
 - `step03.md`: Use `...ResourceNameParameter<AddressResource, KeyName = "addressName", SegmentName = "addresses">` instead of manual `@key/@segment name` fields for child resources.
