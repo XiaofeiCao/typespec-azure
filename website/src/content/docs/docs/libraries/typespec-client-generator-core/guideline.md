@@ -151,6 +151,8 @@ The initialization parameter can be either [`SdkEndpointParameter`](../reference
 
 **SdkMethodParameter** is a normal client-level parameter that can be used in some of the methods belonging to the client. For type details, refer to the next section.
 
+`SdkClientType.versionsEnum` references the SDK Versions enum for the client's service. This is set when the service uses `@versioned` and gives emitters a direct link from the client to its corresponding versions enum. It is `undefined` for unversioned services or clients that span multiple services.
+
 ### Method
 
 Emitters get all methods belonging to a client with `SdkClientType.methods`. An [`SdkServiceMethod`](../reference/js-api/type-aliases/sdkservicemethod/) represents a client's method.
@@ -330,6 +332,12 @@ For each response, TCGC will check the response's content. If contents from diff
 If `@responseAsBool` is on the operation's upper level method, the `404` status code is always recognized as a normal response.
 
 HTTP responses include a `serializationOptions` property that indicates how to deserialize the response body. TCGC automatically populates this from the response's content types — for example, if the response content type is `application/json`, the `json` option is set. Responses without a body have empty serialization options.
+
+HTTP body parameters and responses also include optional `streamMetadata` and `sseMetadata` properties for streaming operations:
+
+- `streamMetadata` ([`SdkStreamMetadata`](../reference/js-api/interfaces/sdkstreammetadata/)): Present when the body or response is a streaming type (e.g. `JsonlStream` or `SSEStream`). Contains the raw `bodyType`, the `originalType` (the stream model itself), the `streamType` (the payload type being streamed), and the associated `contentTypes`.
+
+- `sseMetadata` ([`SdkSseMetadata`](../reference/js-api/interfaces/sdkssemetadata/)): Present alongside `streamMetadata` when the body or response is a server-sent event (SSE, `text/event-stream`) stream. Its `events` array holds one [`SdkSseEventMetadata`](../reference/js-api/interfaces/sdksseeventmetadata/) entry per event variant of the streamed `@events` union. Each entry exposes the SSE `event:` field name (`eventType`), whether the event terminates the stream (`isTerminalEvent`), whether the event type wraps a separate data payload (`isEventEnvelope`), the event `type`, and the `payloadType`.
 
 ### Type Detection
 
