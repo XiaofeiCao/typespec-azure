@@ -151,6 +151,8 @@ The initialization parameter can be either [`SdkEndpointParameter`](../reference
 
 **SdkMethodParameter** is a normal client-level parameter that can be used in some of the methods belonging to the client. For type details, refer to the next section.
 
+`SdkClientType.versionsEnum` is an optional [`SdkEnumType`](../reference/js-api/interfaces/sdkenumtype/) that references the versions enum for the client's service. It is populated for versioned services and gives emitters a direct link from a client to its corresponding `Versions` enum — useful in mixed api-version scenarios where different clients may have different version enums. It is `undefined` for unversioned services or multi-service clients.
+
 ### Method
 
 Emitters get all methods belonging to a client with `SdkClientType.methods`. An [`SdkServiceMethod`](../reference/js-api/type-aliases/sdkservicemethod/) represents a client's method.
