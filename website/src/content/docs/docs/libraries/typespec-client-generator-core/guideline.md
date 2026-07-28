@@ -151,6 +151,8 @@ The initialization parameter can be either [`SdkEndpointParameter`](../reference
 
 **SdkMethodParameter** is a normal client-level parameter that can be used in some of the methods belonging to the client. For type details, refer to the next section.
 
+`SdkClientType.versionsEnum` provides a reference to the API versions enum for the client's service. When the service is versioned (using `@versioned`), this field holds the `SdkEnumType` representing the versions enum so emitters can map a client directly to its supported API versions without re-deriving that information from the type graph. This is especially useful in mixed api-version scenarios where different clients may have different version enums. The field is `undefined` for clients whose service is not versioned.
+
 ### Method
 
 Emitters get all methods belonging to a client with `SdkClientType.methods`. An [`SdkServiceMethod`](../reference/js-api/type-aliases/sdkservicemethod/) represents a client's method.
@@ -330,6 +332,16 @@ For each response, TCGC will check the response's content. If contents from diff
 If `@responseAsBool` is on the operation's upper level method, the `404` status code is always recognized as a normal response.
 
 HTTP responses include a `serializationOptions` property that indicates how to deserialize the response body. TCGC automatically populates this from the response's content types — for example, if the response content type is `application/json`, the `json` option is set. Responses without a body have empty serialization options.
+
+When a response (or request body) carries a `text/event-stream` content type, TCGC populates two extra metadata properties on the HTTP response/body object:
+
+- **`streamMetadata`** ([`SdkStreamMetadata`](../reference/js-api/interfaces/sdkstreammetadata/)): Present for any streaming type (JSONL, SSE, etc.). Contains `bodyType`, `originalType`, `streamType`, and `contentTypes`.
+- **`sseMetadata`** ([`SdkSseMetadata`](../reference/js-api/interfaces/sdkssemetadata/)): Present only for SSE (`text/event-stream`) streams. Contains `events`, an array of [`SdkSseEventMetadata`](../reference/js-api/interfaces/sdksseeventmetadata/) entries, one per variant of the streamed `@events` union. Each entry exposes:
+  - `eventType`: the SSE `event:` field name (from the named union variant; `undefined` for unnamed `message` events).
+  - `isTerminalEvent`: whether the event terminates the stream (from `@terminalEvent`).
+  - `isEventEnvelope`: whether the event type is an envelope wrapping a separate `@data` payload.
+  - `type` / `payloadType`: the event (envelope) type and the inner payload type.
+  - `contentType` / `payloadContentType`: the content types of the envelope and payload respectively.
 
 ### Type Detection
 
