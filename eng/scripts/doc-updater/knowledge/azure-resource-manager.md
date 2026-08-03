@@ -12,6 +12,12 @@ The current (non-deprecated) envelope property spread models are:
 - `...ManagedServiceIdentityProperty` (not `ManagedServiceIdentity`)
 - `...ManagedSystemAssignedIdentityProperty` (not `ManagedSystemAssignedIdentity`)
 - `...ExtendedLocationProperty`
+- `...EncryptionProperty` (not `Encryption`)
+- `...AvailabilityZonesProperty`
+
+All of the above except `EncryptionProperty` are spread into the **resource model** (e.g., `model Foo is TrackedResource<FooProperties> { ...EntityTagProperty; }`). `EncryptionProperty` is spread into the **properties model** (see the `resource-common-properties/encryption/` sample).
+
+`DefaultProvisioningStateProperty` is also a spread model but is spread into the **properties model**, not the resource model.
 
 The deprecated aliases are defined in `lib/models.tsp` with `#deprecated` markers.
 
@@ -59,6 +65,8 @@ Canonical ARM samples are under `packages/samples/specs/resource-manager/`:
 - `resource-types/private-endpoints/` — PrivateEndpointConnection
 - `resource-types/private-links/` — PrivateLink
 - `resource-types/nsp/` — Network Security Perimeter
+- `resource-common-properties/common-properties/` — All recommended envelope properties
+- `resource-common-properties/encryption/` — EncryptionProperty (CMK)
 
 Old paths like `dynatrace/`, `tenantResource/`, `arm-scenarios/singleton/`, `operationsTest/` no longer exist.
 
