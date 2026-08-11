@@ -292,6 +292,8 @@ func (client *PetStoreNamespaceClient) Read(ctx context.Context, name string, op
 
 </ClientTabs>
 
+For the TypeScript emitter, reserved-word operations in an operation group are automatically renamed by appending the singularized group name. For example, `Conversations.delete` becomes `deleteConversation`. If you need to keep the reserved word as the generated JavaScript method name for compatibility, apply a JavaScript-scoped override such as `@@clientName(Conversations.delete, "delete", "javascript")`.
+
 #### Renaming operation parameters
 
 Operation parameters can be renamed using the `@clientName` decorator applied from the `client.tsp` file using the `@@` augment syntax. This is useful when you want different parameter names in the generated client SDK while keeping the wire name unchanged.
