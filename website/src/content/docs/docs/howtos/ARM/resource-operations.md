@@ -200,6 +200,31 @@ The `ArmListBySubscriptionScope` template is used for listing a resource directl
 scope, generating a flat subscription-level path regardless of the resource's parent hierarchy.
 Use this instead of `ArmListBySubscription` when you need a subscription-level list operation for a child resource.
 
+If your subscription-scoped list operation needs the standard `$top` and `$skip` query parameters,
+pass them through the `Parameters` template argument instead of hand-writing raw query properties:
+
+```typespec
+@armResourceOperations
+interface Employees {
+  listBySubscription is ArmListBySubscription<
+    Employee,
+    Parameters = ArmTopParameter & ArmSkipParameter
+  >;
+}
+```
+
+You can also reuse the Azure Core list parameter model:
+
+```typespec
+@armResourceOperations
+interface Employees {
+  listBySubscription is ArmListBySubscription<
+    Employee,
+    Parameters = Azure.Core.StandardListQueryParameters
+  >;
+}
+```
+
 The `ArmResourceListAtScope` template is used when the scope of the list operation is determined by
 the `BaseParameters` type parameter. This is useful for resources with custom scope requirements
 that do not fit the standard parent or subscription scopes.
