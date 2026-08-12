@@ -29,7 +29,9 @@ the version of the Azure Resource Manager common-types to use for refs in emitte
 
 ### `@armLibraryNamespace` {#@Azure.ResourceManager.armLibraryNamespace}
 
-`@armLibraryNamespace` designates a namespace as containign Azure Resource Manager Provider information.
+`@armLibraryNamespace` designates a namespace as containing Azure Resource Manager Provider information.
+This is used for library namespaces that define reusable ARM resource types that can be shared
+across multiple provider specifications.
 
 ```typespec
 @Azure.ResourceManager.armLibraryNamespace
@@ -83,8 +85,9 @@ namespace Microsoft.ContosoService;
 
 ### `@armProviderNameValue` {#@Azure.ResourceManager.armProviderNameValue}
 
-`@armResourceType` sets the value fo the decorated string
-property to the type of the Azure Resource Manager resource.
+`@armProviderNameValue` sets the provider namespace value on operations.
+It is used internally to inject the correct provider namespace path segment
+for resource operations in auto-generated routes.
 
 ```typespec
 @Azure.ResourceManager.armProviderNameValue
@@ -99,6 +102,11 @@ property to the type of the Azure Resource Manager resource.
 None
 
 ### `@armResourceAction` {#@Azure.ResourceManager.armResourceAction}
+
+Marks the operation as a custom action on a specific Azure Resource Manager resource type.
+This decorator associates a POST action operation with its resource,
+identifying the semantics of the operation as a resource action over a specific resource for documentation,
+resource validation, and use by downstream emitters.
 
 ```typespec
 @Azure.ResourceManager.armResourceAction(resourceModel: Model, resourceName?: valueof string)
