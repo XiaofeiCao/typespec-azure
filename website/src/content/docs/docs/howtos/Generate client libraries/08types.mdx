@@ -2628,3 +2628,40 @@ jsonWriter.writeStringField("prop", Objects.toString(this.value, null));
 ```
 </ClientTabItem>
 </ClientTabs>
+
+Delimited array encodings are also preserved in generated Go models for string arrays and string-backed enum arrays. The public model stays array-typed, and the generated serialization code joins and splits the encoded wire representation.
+
+<ClientTabs>
+<ClientTabItem lang="typespec" >
+
+```typespec
+enum Color {
+  Red: "red",
+  Blue: "blue",
+}
+
+model Widget {
+  @encode(TypeSpec.ArrayEncoding.commaDelimited)
+  names: string[];
+
+  @encode(TypeSpec.ArrayEncoding.spaceDelimited)
+  colors: Color[];
+}
+```
+
+</ClientTabItem>
+<ClientTabItem lang="go" >
+
+```go
+type Widget struct {
+	Colors []*Color
+	Names  []*string
+}
+
+// Internal implementation
+populateStringArray(objectMap, "colors", w.Colors, " ")
+populateStringArray(objectMap, "names", w.Names, ",")
+```
+
+</ClientTabItem>
+</ClientTabs>
