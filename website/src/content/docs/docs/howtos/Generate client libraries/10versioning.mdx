@@ -932,6 +932,10 @@ client.get(); // version parameter is elevated onto the client
 ```
 
 ```go
+type ServiceClientOptions struct {
+	azcore.ClientOptions
+}
+
 type Versions string
 
 const (
@@ -941,11 +945,22 @@ const (
 
 type ServiceClient struct {}
 
-func (client *ServiceClient) Get(ctx context.Context, version Versions, options *RequestOptions) (Response, error)
+func NewServiceClient(endpoint string, options *ServiceClientOptions) (*ServiceClient, error)
 
+func (client *ServiceClient) Get(ctx context.Context, options *RequestOptions) (Response, error)
+
+client, _ := NewServiceClient(endpoint, nil)
+// client's version will be 2024-04-01
+
+clientWithSpecifiedAPIVersion, _ := NewServiceClient(endpoint, &ServiceClientOptions{
+	ClientOptions: azcore.ClientOptions{APIVersion: string(v2023_11_01)},
+})
+// client's version will be 2023-11-01
 ```
 
 </ClientTabs>
+
+For Go clients, this client-level `APIVersion` override is also used when the detected API version parameter comes from a path segment instead of a query or header parameter.
 
 ### Keeping an Api Version Parameter on the Operation with `@apiVersion(false)`
 
