@@ -643,7 +643,7 @@ model Azure.ResourceManager.EntityTagProperty
 
 ```typespec
 model Foo is TrackedResource<FooProperties> {
-  // Only have standard Succeeded, Failed, Cancelled states
+  ...ResourceNameParameter<Foo>;
   ...EntityTagProperty;
 }
 ```
@@ -720,12 +720,7 @@ model Azure.ResourceManager.ExtensionResource<Properties, PropertiesOptional>
 
 ```typespec
 model PetInstance is ExtensionResource<PetProperties> {
-  @key
-  @path
-  @segment("petInstances")
-  @pattern("^[a-zA-Z0-9-]{3,24}$")
-  @visibility(Lifecycle.Read)
-  name: string;
+  ...ResourceNameParameter<PetInstance>;
 }
 ```
 
@@ -810,7 +805,7 @@ model Azure.ResourceManager.ManagedByProperty
 
 ```typespec
 model Foo is TrackedResource<FooProperties> {
-  // Only have standard Succeeded, Failed, Cancelled states
+  ...ResourceNameParameter<Foo>;
   ...ManagedByProperty;
 }
 ```
@@ -1084,7 +1079,7 @@ model Azure.ResourceManager.ResourceKindProperty<Type>
 
 ```typespec
 model Foo is TrackedResource<FooProperties> {
-  // Only have standard Succeeded, Failed, Cancelled states
+  ...ResourceNameParameter<Foo>;
   ...ResourceKindProperty;
 }
 ```
@@ -1153,7 +1148,7 @@ Spread this model into ARM resource models to specify resource name parameter fo
 is specified, the resource name will be properly camel cased and pluralized for `@key` and `@segment`
 automatically. You can also apply explicit override with `KeyName` and `SegmentName` template parameters.
 
-For additional decorators such as
+For additional decorators such as `minLength`, use either an augment decorator on `[Resource].name` or a scalar string type with the decorators applied.
 
 ```typespec
 model Azure.ResourceManager.ResourceNameParameter<Resource, KeyName, SegmentName, NamePattern, Type>
@@ -1238,7 +1233,7 @@ model Azure.ResourceManager.ResourcePlanProperty
 
 ```typespec
 model Foo is TrackedResource<FooProperties> {
-  // Only have standard Succeeded, Failed, Cancelled states
+  ...ResourceNameParameter<Foo>;
   ...ResourcePlanProperty;
 }
 ```
@@ -1262,7 +1257,7 @@ model Azure.ResourceManager.ResourceSkuProperty
 
 ```typespec
 model Foo is TrackedResource<FooProperties> {
-  // Only have standard Succeeded, Failed, Cancelled states
+  ...ResourceNameParameter<Foo>;
   ...ResourceSkuProperty;
 }
 ```

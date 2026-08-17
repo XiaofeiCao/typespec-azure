@@ -462,13 +462,37 @@ Finally, when your _rp-specific property bag_ contains an array of complex prope
 
 ## Adding Optional Standard Envelope Properties
 
-In addition to the resource-specific property bag, a resource may configure on or more standard ARM features through the use of standard properties in the _ARM Envelope_. Standard features configured in the envelope include:
+In addition to the resource-specific property bag, a resource may configure one or more standard ARM features through standard properties in the _ARM envelope_. Spread these properties onto the resource model itself, not onto the `<Resource>Properties` model. Standard features configured in the envelope include:
 
 - **Managed Identity**: Associating a managed identity with the resource to authorize actions taken by this resource on other resources.
 - **SKU**: A standard mechanism for configuring levels of service for a resource.
 - **Plan**: A standard mechanism for configuring MarketPlace billing plans for a resource.
 - **ETags**: A standard mechanism for managing concurrent operations over the resource.
 - **ResourceKind**: A standard mechanism for specifying a type of user experience in the portal.
+- **ManagedBy**: A standard mechanism for declaring that another Azure resource manages this resource.
+- **Extended Location**: A standard mechanism for placing a resource into an extended or edge location.
+
+If your resource supports several of these features, compose them directly on the resource model:
+
+```typespec
+model Widget is TrackedResource<WidgetProperties> {
+  ...ResourceNameParameter<Widget, NamePattern = "^[a-zA-Z0-9-]{3,24}$">;
+  ...EntityTagProperty;
+  ...ExtendedLocationProperty;
+  ...ManagedByProperty;
+  ...ManagedServiceIdentityProperty;
+  ...ResourceKindProperty;
+  ...ResourcePlanProperty;
+  ...ResourceSkuProperty;
+}
+
+model WidgetProperties {
+  color: string;
+
+  @visibility(Lifecycle.Read)
+  provisioningState?: ResourceProvisioningState;
+}
+```
 
 ### Managed Identity
 
@@ -558,6 +582,17 @@ model Employee is TrackedResource<EmployeeProperties> {
 ```
 
 For more information on supporting 'ManagedBy', see [ManagedBy API Contract](https://eng.ms/docs/products/arm/api_contracts/managedby)
+
+### Extended Location
+
+Support for resources that can be placed into an extended or edge location. To include `extendedLocation` in the resource definition, add the `ExtendedLocationProperty` envelope property:
+
+```typespec
+model Employee is TrackedResource<EmployeeProperties> {
+  ...ResourceNameParameter<Employee>;
+  ...ExtendedLocationProperty;
+}
+```
 
 ## Reference
 

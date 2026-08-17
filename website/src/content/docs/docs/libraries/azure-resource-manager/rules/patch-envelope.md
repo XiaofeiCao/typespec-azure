@@ -11,7 +11,7 @@ Patch envelope properties should match the resource properties. If a resource de
 #### ❌ Incorrect
 
 ```tsp
-model FooResource is TrackedResource<FooProperties> {
+model Foo is TrackedResource<FooProperties> {
   ...ResourceNameParameter<Foo>;
   ...ManagedServiceIdentityProperty;
 }
@@ -27,14 +27,14 @@ model PatchFooProperties {
 @armResourceOperations
 interface FooResources {
   // update model is missing the 'identity' envelope property
-  update is ArmCustomPatchAsync<FooResource, PatchFoo>;
+  update is ArmCustomPatchAsync<Foo, PatchFoo>;
 }
 ```
 
 #### ✅ Correct
 
 ```tsp
-model FooResource is TrackedResource<FooProperties> {
+model Foo is TrackedResource<FooProperties> {
   ...ResourceNameParameter<Foo>;
   ...ManagedServiceIdentityProperty;
 }
@@ -50,6 +50,6 @@ model PatchFooProperties {
 
 @armResourceOperations
 interface FooResources {
-  update is ArmCustomPatchAsync<FooResource, PatchFoo>;
+  update is ArmCustomPatchAsync<Foo, PatchFoo>;
 }
 ```

@@ -11,22 +11,22 @@ Validate ARM PATCH operations. The request body of a PATCH must be a model with 
 #### ❌ Incorrect
 
 ```tsp
-model FooResource is TrackedResource<FooProperties> {
-  ...ResourceNameParameter<FooResource>;
+model Foo is TrackedResource<FooProperties> {
+  ...ResourceNameParameter<Foo>;
 }
 
 model MyBadPatch {
   name?: string;
   ...Foundations.ArmTagsProperty;
-  blah?: string; // does not exist on FooResource
+  blah?: string; // does not exist on Foo
 }
 ```
 
 #### ✅ Correct
 
 ```tsp
-model FooResource is TrackedResource<FooProperties> {
-  ...ResourceNameParameter<FooResource>;
+model Foo is TrackedResource<FooProperties> {
+  ...ResourceNameParameter<Foo>;
 }
 
 model FooPatch {

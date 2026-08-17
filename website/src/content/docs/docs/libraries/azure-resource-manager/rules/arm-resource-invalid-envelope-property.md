@@ -14,8 +14,8 @@ Resource envelope properties must originate from the `Azure.ResourceManager` nam
 @armProviderNamespace
 namespace MyService;
 
-model FooResource is TrackedResource<{}> {
-  ...ResourceNameParameter<FooResource>;
+model Foo is TrackedResource<{}> {
+  ...ResourceNameParameter<Foo>;
   disallowed?: string; // not valid in the resource envelope
 }
 ```
@@ -26,8 +26,8 @@ model FooResource is TrackedResource<{}> {
 @armProviderNamespace
 namespace MyService;
 
-model FooResource is TrackedResource<{}> {
-  ...ResourceNameParameter<FooResource>;
+model Foo is TrackedResource<{}> {
+  ...ResourceNameParameter<Foo>;
   ...ManagedServiceIdentityProperty;
 }
 ```
