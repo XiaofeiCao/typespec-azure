@@ -6,14 +6,14 @@ title: "resource-name"
 @azure-tools/typespec-azure-resource-manager/resource-name
 ```
 
-Check the resource name. ARM resource model names must contain only alphanumeric characters (starting with an uppercase letter), and the `name` property must be a read-only `@path` parameter.
+Check the resource name. ARM resource model names must contain only alphanumeric characters and start with an uppercase letter, and the `name` property must be a read-only `@path` parameter. For new ARM specs, prefer names like `Widget` and `WidgetProperties` instead of redundant `WidgetResource` and `WidgetResourceProperties`.
 
 #### ❌ Incorrect
 
 Missing `@path` decorator on `name`:
 
 ```tsp
-model FooResource is TrackedResource<{}> {
+model Foo is TrackedResource<{}> {
   @key("foo")
   @segment("foo")
   name: string;
@@ -33,7 +33,7 @@ model Foo_Resource is TrackedResource<{}> {
 #### ✅ Correct
 
 ```tsp
-model FooResource is TrackedResource<{}> {
-  ...ResourceNameParameter<FooResource>;
+model Foo is TrackedResource<{}> {
+  ...ResourceNameParameter<Foo>;
 }
 ```

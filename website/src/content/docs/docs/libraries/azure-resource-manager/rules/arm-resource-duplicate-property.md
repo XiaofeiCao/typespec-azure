@@ -14,8 +14,8 @@ Warns when a property defined in the resource envelope is also defined in the re
 @armProviderNamespace
 namespace MyService;
 
-model FooResource is TrackedResource<FooProperties> {
-  ...ResourceNameParameter<FooResource>;
+model Foo is TrackedResource<FooProperties> {
+  ...ResourceNameParameter<Foo>;
   ...ManagedServiceIdentityProperty;
 }
 
@@ -31,8 +31,8 @@ model FooProperties {
 @armProviderNamespace
 namespace MyService;
 
-model FooResource is TrackedResource<FooProperties> {
-  ...ResourceNameParameter<FooResource>;
+model Foo is TrackedResource<FooProperties> {
+  ...ResourceNameParameter<Foo>;
   ...ManagedServiceIdentityProperty;
 }
 

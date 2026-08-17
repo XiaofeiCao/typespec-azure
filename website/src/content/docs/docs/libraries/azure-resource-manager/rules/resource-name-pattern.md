@@ -6,7 +6,7 @@ title: resource-name-pattern
 @azure-tools/typespec-azure-resource-manager/arm-resource-name-pattern
 ```
 
-Resource names must specify a pattern string using `@pattern`, providing a regular expression that the name must match.
+Resource names must include a regex restriction. You can do that either by applying `@pattern` directly to the `name` property, or by using `ResourceNameParameter` and overriding `NamePattern` when you need a custom regex. If you omit `NamePattern`, `ResourceNameParameter` applies the library's default ARM resource-name pattern.
 
 #### ❌ Incorrect
 
@@ -15,6 +15,7 @@ model Employee is ProxyResource<{}> {
   @key("employeeName")
   @path
   @segment("employees")
+  @pattern("^[a-zA-Z0-9-]{3,24}$")
   name: string;
 }
 ```
@@ -23,6 +24,6 @@ model Employee is ProxyResource<{}> {
 
 ```tsp
 model Employee is ProxyResource<{}> {
-  ...ResourceNameParameter<Employee>;
+  ...ResourceNameParameter<Employee, NamePattern = "^[a-zA-Z0-9-]{3,24}$">;
 }
 ```

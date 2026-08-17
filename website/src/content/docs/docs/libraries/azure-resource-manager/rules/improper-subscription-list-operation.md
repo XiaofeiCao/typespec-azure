@@ -12,13 +12,13 @@ Tenant and Extension resources should not define a list by subscription operatio
 
 ```tsp
 @tenantResource
-model FooResource is ProxyResource<FooProperties> {
-  ...ResourceNameParameter<FooResource>;
+model Foo is ProxyResource<FooProperties> {
+  ...ResourceNameParameter<Foo>;
 }
 
-@armResourceOperations(FooResource)
+@armResourceOperations(Foo)
 interface FooResources {
-  listBySubscription is ArmListBySubscription<FooResource>;
+  listBySubscription is ArmListBySubscription<Foo>;
 }
 ```
 
@@ -26,12 +26,12 @@ interface FooResources {
 
 ```tsp
 @tenantResource
-model FooResource is ProxyResource<FooProperties> {
-  ...ResourceNameParameter<FooResource>;
+model Foo is ProxyResource<FooProperties> {
+  ...ResourceNameParameter<Foo>;
 }
 
-@armResourceOperations(FooResource)
+@armResourceOperations(Foo)
 interface FooResources {
-  get is ArmResourceRead<FooResource>;
+  get is ArmResourceRead<Foo>;
 }
 ```

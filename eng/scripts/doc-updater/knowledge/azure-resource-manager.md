@@ -17,7 +17,7 @@ The deprecated aliases are defined in `lib/models.tsp` with `#deprecated` marker
 
 ## Resource Name Pattern
 
-Always use `...ResourceNameParameter<ModelName>` in resource model definitions instead of manual `@key/@segment/@visibility/@path name` patterns. The template auto-generates camelCased key names and pluralized segment names from the model name. Custom key/segment names can be overridden via `KeyName` and `SegmentName` template parameters.
+Always use `...ResourceNameParameter<ModelName>` in resource model definitions instead of manual `@key/@segment/@visibility/@path name` patterns. The template auto-generates camelCased key names and pluralized segment names from the model name. Custom key/segment names can be overridden via `KeyName` and `SegmentName` template parameters, and a custom regex goes through `NamePattern` rather than a hand-written `@pattern` on the property.
 
 ## Resource Model Naming
 
@@ -33,6 +33,14 @@ model Employee is TrackedResource<EmployeeProperties> {
   ...ResourceNameParameter<Employee>;
 }
 ```
+
+## Envelope Property Placement
+
+Standard ARM envelope properties belong on the resource model itself, not inside the RP-specific `properties` bag. The canonical example is the `resource-common-properties/common-properties` sample, which spreads these directly onto the resource model: `EntityTagProperty`, `ExtendedLocationProperty`, `ManagedByProperty`, `ManagedServiceIdentityProperty`, `ResourceKindProperty`, `ResourcePlanProperty`, and `ResourceSkuProperty`.
+
+## Legacy Sample Playground Behavior
+
+If an ARM sample subtree is marked with `playground: false` in `sample-config.yaml`, documentation must not present that sample as runnable in the interactive playground. The `resource-manager/legacy` samples are grandfathered-only examples and intentionally disable playground support.
 
 ## Rule Documentation Files
 

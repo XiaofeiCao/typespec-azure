@@ -11,7 +11,7 @@ namespace Azure.ResourceManager;
  * is specified, the resource name will be properly camel cased and pluralized for `@key` and `@segment`
  * automatically. You can also apply explicit override with `KeyName` and `SegmentName` template parameters.
  *
- * For additional decorators such as @minLength, you can use either augment decorator on `[Resource].name` or passing in a scalar string type with decorators.
+ * For additional decorators such as `minLength`, use either an augment decorator on `[Resource].name` or a scalar string type with the decorators applied.
  *
  * @template Resource The ARM resource this name parameter is applying to.
  * @template KeyName Override default key name of the resource.
@@ -104,12 +104,7 @@ model ProxyResource<Properties extends {}, PropertiesOptional extends valueof bo
  * @example
  * ```typespec
  * model PetInstance is ExtensionResource<PetProperties> {
- *  @key
- *  @path
- *  @segment("petInstances")
- *  @pattern("^[a-zA-Z0-9-]{3,24}$")
- *  @visibility(Lifecycle.Read)
- *  name: string;
+ *  ...ResourceNameParameter<PetInstance>;
  * }
  * ```
  */
@@ -286,7 +281,7 @@ alias EntityTag = EntityTagProperty;
  *
  * ```typespec
  * model Foo is TrackedResource<FooProperties> {
- *   // Only have standard Succeeded, Failed, Cancelled states
+ *   ...ResourceNameParameter<Foo>;
  *   ...EntityTagProperty;
  * }
  * ```
@@ -309,7 +304,7 @@ alias ResourceKind = ResourceKindProperty;
  *
  * ```typespec
  * model Foo is TrackedResource<FooProperties> {
- *   // Only have standard Succeeded, Failed, Cancelled states
+ *   ...ResourceNameParameter<Foo>;
  *   ...ResourceKindProperty;
  * }
  * ```
@@ -365,7 +360,7 @@ alias ResourcePlan = ResourcePlanProperty;
  *
  * ```typespec
  * model Foo is TrackedResource<FooProperties> {
- *   // Only have standard Succeeded, Failed, Cancelled states
+ *   ...ResourceNameParameter<Foo>;
  *   ...ResourcePlanProperty;
  * }
  * ```
@@ -386,7 +381,7 @@ alias ResourceSku = ResourceSkuProperty;
  *
  * ```typespec
  * model Foo is TrackedResource<FooProperties> {
- *   // Only have standard Succeeded, Failed, Cancelled states
+ *   ...ResourceNameParameter<Foo>;
  *   ...ResourceSkuProperty;
  * }
  * ```
@@ -407,7 +402,7 @@ alias ManagedBy = ManagedByProperty;
  *
  * ```typespec
  * model Foo is TrackedResource<FooProperties> {
- *   // Only have standard Succeeded, Failed, Cancelled states
+ *   ...ResourceNameParameter<Foo>;
  *   ...ManagedByProperty;
  * }
  * ```
