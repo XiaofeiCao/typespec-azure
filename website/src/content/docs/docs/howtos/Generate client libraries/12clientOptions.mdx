@@ -8,7 +8,7 @@ import { ClientTabs, ClientTabItem } from "@components/client-tabs";
 This page documents how to use the `@clientOption` decorator to pass language-specific configuration options to emitters. For an overview of the setup, please visit the setup page.
 
 :::caution
-The `@clientOption` decorator is intended for advanced scenarios where language-specific emitter behavior needs to be configured. Using this decorator always produces a warning to ensure intentional usage. Use standard TCGC decorators when possible.
+The `@clientOption` decorator is intended for advanced scenarios where language-specific emitter behavior needs to be configured. Using this decorator always produces a warning to ensure intentional usage, and omitting or using an invalid scope also produces `decorator-requires-scope`. Use standard TCGC decorators when possible.
 :::
 
 ## Overview

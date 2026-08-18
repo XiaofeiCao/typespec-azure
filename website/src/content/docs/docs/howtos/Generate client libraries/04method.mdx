@@ -116,7 +116,9 @@ As emitters global parameters:
 
 To set global emitters parameters, read the documentation of [emitters configuration](https://microsoft.github.io/typespec/introduction/configuration#configuration-file).
 
-For fine tuning, the set of decorators `@protocolAPI` and `@convenientAPI` can be used. They take a required boolean as parameter.
+For fine tuning, the set of decorators `@protocolAPI` and `@convenientAPI` can be used.
+They take a boolean flag and should be scoped to `java`, `csharp`, or both, since those are
+the emitters that consume them.
 
 #### Shifting the generation of protocol and convenience on and off
 
@@ -130,7 +132,7 @@ import "@azure-tools/typespec-client-generator-core";
 
 using Azure.ClientGenerator.Core;
 
-@@convenientAPI(PetStoreNamespace.GetModel, false);
+@@convenientAPI(PetStoreNamespace.GetModel, false, "java, csharp");
 ```
 
 ```python
