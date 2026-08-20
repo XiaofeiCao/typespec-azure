@@ -729,8 +729,8 @@ suppression to acknowledge its experimental nature.
 
 See supported client options for each language emitter here https://azure.github.io/typespec-azure/docs/howtos/generate-client-libraries/12clientOptions/
 
-**Warning**: This decorator always emits a warning that must be suppressed, and an additional
-warning if no scope is provided (since options are typically language-specific).
+**Warning**: This decorator always emits a warning that must be suppressed, and the
+`decorator-requires-scope` validation also warns if no scope is provided or if the scope is invalid.
 
 ```typespec
 @Azure.ClientGenerator.Core.clientOption(name: valueof string, value: valueof unknown, scope?: valueof string)
@@ -747,7 +747,7 @@ The type you want to apply the option to.
 | ----- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | name  | `valueof string`  | The name of the option (e.g., "enableFeatureFoo").                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | value | `valueof unknown` | The value of the option. Can be any type; emitters will cast as needed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| scope | `valueof string`  | Specifies the target language emitters that the decorator should apply. If not set, the decorator will be applied to all language emitters by default.<br /><br />**Supported language identifiers:** `csharp`, `python`, `java`, `javascript`, `go`, and other language emitter names (derived from the emitter package name, e.g., `@azure-tools/typespec-csharp` → `csharp`).<br /><br />**Valid patterns:**<br />- Single language: `"python"`<br />- Multiple languages (comma-separated): `"python, java"`<br />- Negation to exclude languages: `"!csharp"` or `"!(java, python)"` |
+| scope | `valueof string`  | Specifies the target language emitters that the decorator should apply. In practice this should always be set to one or more specific languages; omitting it still applies the decorator globally, but also triggers the `decorator-requires-scope` warning.<br /><br />**Supported language identifiers:** `csharp`, `python`, `java`, `javascript`, `go`, and other language emitter names (derived from the emitter package name, e.g., `@azure-tools/typespec-csharp` → `csharp`).<br /><br />**Valid patterns:**<br />- Single language: `"python"`<br />- Multiple languages (comma-separated): `"python, java"`<br />- Negation to exclude languages: `"!csharp"` or `"!(java, python)"` |
 
 #### Examples
 
@@ -780,21 +780,21 @@ The target operation, namespace, or interface.
 | Name  | Type              | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | ----- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | flag  | `valueof boolean` | Whether to generate the operation as a convenience method or not.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| scope | `valueof string`  | Specifies the target language emitters that the decorator should apply. If not set, the decorator will be applied to all language emitters by default.<br /><br />**Supported language identifiers:** `csharp`, `python`, `java`, `javascript`, `go`, and other language emitter names (derived from the emitter package name, e.g., `@azure-tools/typespec-csharp` → `csharp`).<br /><br />**Valid patterns:**<br />- Single language: `"python"`<br />- Multiple languages (comma-separated): `"python, java"`<br />- Negation to exclude languages: `"!csharp"` or `"!(java, python)"` |
+| scope | `valueof string`  | Specifies the target language emitters that the decorator should apply. This decorator should be scoped to `java`, `csharp`, or both; omitting the scope or using any other language scope triggers the `decorator-requires-scope` warning.<br /><br />**Valid patterns:**<br />- `"java"`<br />- `"csharp"`<br />- `"java, csharp"` |
 
 #### Examples
 
 ##### Apply to a single operation
 
 ```typespec
-@convenientAPI(false)
+@convenientAPI(false, "java")
 op test: void;
 ```
 
 ##### Apply to all operations in an interface
 
 ```typespec
-@convenientAPI(false)
+@convenientAPI(false, "java")
 interface MyOperations {
   test1(): void;
   test2(): void;
@@ -804,7 +804,7 @@ interface MyOperations {
 ##### Apply to all operations in a namespace
 
 ```typespec
-@convenientAPI(false)
+@convenientAPI(false, "java")
 namespace MyService {
   op test1(): void;
   op test2(): void;
@@ -996,21 +996,21 @@ The target operation, namespace, or interface.
 | Name  | Type              | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | ----- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | flag  | `valueof boolean` | Whether to generate the operation as a protocol method or not.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| scope | `valueof string`  | Specifies the target language emitters that the decorator should apply. If not set, the decorator will be applied to all language emitters by default.<br /><br />**Supported language identifiers:** `csharp`, `python`, `java`, `javascript`, `go`, and other language emitter names (derived from the emitter package name, e.g., `@azure-tools/typespec-csharp` → `csharp`).<br /><br />**Valid patterns:**<br />- Single language: `"python"`<br />- Multiple languages (comma-separated): `"python, java"`<br />- Negation to exclude languages: `"!csharp"` or `"!(java, python)"` |
+| scope | `valueof string`  | Specifies the target language emitters that the decorator should apply. This decorator should be scoped to `java`, `csharp`, or both; omitting the scope or using any other language scope triggers the `decorator-requires-scope` warning.<br /><br />**Valid patterns:**<br />- `"java"`<br />- `"csharp"`<br />- `"java, csharp"` |
 
 #### Examples
 
 ##### Apply to a single operation
 
 ```typespec
-@protocolAPI(false)
+@protocolAPI(false, "java")
 op test: void;
 ```
 
 ##### Apply to all operations in an interface
 
 ```typespec
-@protocolAPI(false)
+@protocolAPI(false, "java")
 interface MyOperations {
   test1(): void;
   test2(): void;
@@ -1020,7 +1020,7 @@ interface MyOperations {
 ##### Apply to all operations in a namespace
 
 ```typespec
-@protocolAPI(false)
+@protocolAPI(false, "java")
 namespace MyService {
   op test1(): void;
   op test2(): void;
