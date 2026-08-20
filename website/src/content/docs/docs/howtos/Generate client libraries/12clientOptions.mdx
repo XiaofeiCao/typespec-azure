@@ -25,7 +25,7 @@ The `@clientOption` decorator allows spec authors to pass arbitrary key-value op
 | --------- | ----------------------------- | --------------------------------------------------------------------------------------- |
 | `name`    | `string`                      | The name of the option to set                                                           |
 | `value`   | `string \| boolean \| number` | The value for the option                                                                |
-| `scope`   | `string` (optional)           | The target language scope. **Required** - omitting scope produces an additional warning |
+| `scope`   | `string` (optional)           | The target language scope. **Required in practice** - omitting scope or using an invalid scope produces an additional warning |
 
 ## Usage
 
@@ -192,7 +192,7 @@ op createBlob(): void;
 
 ## Best Practices
 
-1. **Always specify a scope**: The decorator is designed for language-specific behavior. Omitting the scope produces an additional warning.
+1. **Always specify a scope**: The decorator is designed for language-specific behavior. Omitting the scope or using an invalid scope produces an additional warning.
 
 2. **Suppress the warning intentionally**: Use `#suppress "@azure-tools/typespec-client-generator-core/client-option"` to acknowledge that you're using this advanced feature.
 
