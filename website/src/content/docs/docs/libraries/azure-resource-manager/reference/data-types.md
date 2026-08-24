@@ -112,7 +112,7 @@ model Azure.ResourceManager.ArmCombinedLroHeaders<StatusMonitor, FinalResult, Po
 | StatusMonitor   | The type of the polling StatusMonitor when following the Azure-AsyncOperation url |
 | FinalResult     | The type of the logical result when following the location header                 |
 | PollingUrlValue | The value type of the link to the status monitor                                  |
-| FinalUrlValue   | The value type fo the link to the final result                                    |
+| FinalUrlValue   | The value type for the link to the final result                                   |
 
 #### Examples
 
@@ -574,6 +574,7 @@ model Azure.ResourceManager.AvailabilityZonesProperty
 
 ```typespec
 model Foo is TrackedResource<FooProperties> {
+  // Spread this model into resources that support availability zones.
   ...AvailabilityZonesProperty;
 }
 ```
@@ -597,7 +598,7 @@ model Azure.ResourceManager.DefaultProvisioningStateProperty
 
 ```typespec
 model FooProperties {
-  // Only have standard Succeeded, Failed, Cancelled states
+  // Spread this model into resource property models that include provisioningState.
   ...DefaultProvisioningStateProperty;
 }
 ```
@@ -621,7 +622,7 @@ model Azure.ResourceManager.EncryptionProperty
 
 ```typespec
 model Foo is TrackedResource<FooProperties> {
-  ...Encryption;
+  ...EncryptionProperty;
 }
 ```
 
@@ -643,7 +644,7 @@ model Azure.ResourceManager.EntityTagProperty
 
 ```typespec
 model Foo is TrackedResource<FooProperties> {
-  // Only have standard Succeeded, Failed, Cancelled states
+  // Spread this model into resources that support an eTag property.
   ...EntityTagProperty;
 }
 ```
@@ -810,7 +811,7 @@ model Azure.ResourceManager.ManagedByProperty
 
 ```typespec
 model Foo is TrackedResource<FooProperties> {
-  // Only have standard Succeeded, Failed, Cancelled states
+  // Spread this model into resources managed by another entity.
   ...ManagedByProperty;
 }
 ```
@@ -823,7 +824,7 @@ model Foo is TrackedResource<FooProperties> {
 
 ### `ManagedServiceIdentityProperty` {#Azure.ResourceManager.ManagedServiceIdentityProperty}
 
-Model representing the standard `ManagedServiceIdentity` envelope property for a resource.
+Model representing the standard `identity` envelope property for a resource.
 Spread this model into a resource model if the resource supports both system-assigned and user-assigned managed identities.
 
 ```typespec
@@ -847,7 +848,7 @@ model Foo is TrackedResource<FooProperties> {
 
 ### `ManagedSystemAssignedIdentityProperty` {#Azure.ResourceManager.ManagedSystemAssignedIdentityProperty}
 
-Model representing the standard `SystemAssignedServiceIdentity` envelope property for a resource.
+Model representing the standard `identity` envelope property for a resource.
 Spread this model into a resource model if the resource supports system-assigned managed identities
 but does not support user-assigned managed identities.
 
@@ -1084,7 +1085,7 @@ model Azure.ResourceManager.ResourceKindProperty<Type>
 
 ```typespec
 model Foo is TrackedResource<FooProperties> {
-  // Only have standard Succeeded, Failed, Cancelled states
+  // Spread this model into resources that support a kind property.
   ...ResourceKindProperty;
 }
 ```
@@ -1238,7 +1239,7 @@ model Azure.ResourceManager.ResourcePlanProperty
 
 ```typespec
 model Foo is TrackedResource<FooProperties> {
-  // Only have standard Succeeded, Failed, Cancelled states
+  // Spread this model into resources that support a plan property.
   ...ResourcePlanProperty;
 }
 ```
@@ -1262,7 +1263,7 @@ model Azure.ResourceManager.ResourceSkuProperty
 
 ```typespec
 model Foo is TrackedResource<FooProperties> {
-  // Only have standard Succeeded, Failed, Cancelled states
+  // Spread this model into resources that support a sku property.
   ...ResourceSkuProperty;
 }
 ```
@@ -3898,7 +3899,7 @@ model Azure.ResourceManager.Legacy.PolymorphicResourceKindProperty<Type>
 
 ```typespec
 model Foo is TrackedResource<FooProperties> {
-  // Only have standard Succeeded, Failed, Cancelled states
+  // Spread this model into resources that support a kind property.
   ...PolymorphicResourceKindProperty;
 }
 ```

@@ -2,7 +2,7 @@
 title: secret-prop
 ---
 
-```text title=- Full name-
+```text title="Full name"
 @azure-tools/typespec-azure-resource-manager/secret-prop
 ```
 

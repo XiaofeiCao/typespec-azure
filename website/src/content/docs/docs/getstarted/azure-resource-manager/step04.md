@@ -37,12 +37,12 @@ interface Users {
 
 The following operation templates for different kinds of actions are provided in the `Azure.ResourceManager` namespace:
 
-| Template                                                 | Description                                                                                        |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `ArmResourceActionNoContentSync<TResource, TRequest>`    | Synchronous action with no data in the response, providing the resource type and request payload.  |
-| `ArmResourceActionNoContentAsync<TResource, TRequest>`   | Asynchronous action with no data in the response, providing the resource type and request payload. |
-| `ArmResourceActionSync<TResource, TRequest, TResponse>`  | Synchronous action, providing the resource type and request and response payload.                  |
-| `ArmResourceActionAsync<TResource, TRequest, TResponse>` | Asynchronous action, providing the resource type and request and response payload.                 |
+| Template                                                       | Description                                                                                        |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `ArmResourceActionNoContentSync<TResource, TRequest>`          | Synchronous action with no data in the response, providing the resource type and request payload.  |
+| `ArmResourceActionNoResponseContentAsync<TResource, TRequest>` | Asynchronous action with no data in the response, providing the resource type and request payload. |
+| `ArmResourceActionSync<TResource, TRequest, TResponse>`        | Synchronous action, providing the resource type and request and response payload.                  |
+| `ArmResourceActionAsync<TResource, TRequest, TResponse>`       | Asynchronous action, providing the resource type and request and response payload.                 |
 
 ## Custom Operations
 
@@ -79,14 +79,15 @@ Custom operations in ARM still need to respect the correct response schema. This
 
 There are a number of model types which specify common parameters which are used in resource type operations:
 
-| Model                        | In           | Description                                                        |
-| ---------------------------- | ------------ | ------------------------------------------------------------------ |
-| `ApiVersionParameter`        | query        | `api-version` parameter                                            |
-| `SubscriptionIdParameter`    | path         | Subscription ID path parameter                                     |
-| `ResourceGroupNameParameter` | path         | Resource Group Name path parameter                                 |
-| `CommonResourceParameters`   | path & query | Group of Api version, Subscription ID and Resource group parameter |
-| `ResourceUriParameter`       | path         | Resource uri path parameter                                        |
-| `OperationIdParameter`       | path         | Operation Id path parameter                                        |
+| Model                           | In           | Description                                                                        |
+| ------------------------------- | ------------ | ---------------------------------------------------------------------------------- |
+| `ApiVersionParameter`           | query        | `api-version` parameter                                                            |
+| `SubscriptionIdParameter`       | path         | Subscription ID path parameter                                                     |
+| `ResourceGroupNameParameter`    | path         | Resource Group Name path parameter                                                 |
+| `ResourceInstanceParameters<T>` | path & query | Identity parameters for a resource, with api-version and provider namespace        |
+| `ResourceParentParameters<T>`   | path & query | Identity parameters for listing by parent, with api-version and provider namespace |
+| `ResourceUriParameter`          | path         | Resource uri path parameter                                                        |
+| `OperationIdParameter`          | path         | Operation Id path parameter                                                        |
 
 ## Name Availability Operations
 

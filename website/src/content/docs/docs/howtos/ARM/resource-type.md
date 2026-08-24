@@ -462,13 +462,15 @@ Finally, when your _rp-specific property bag_ contains an array of complex prope
 
 ## Adding Optional Standard Envelope Properties
 
-In addition to the resource-specific property bag, a resource may configure on or more standard ARM features through the use of standard properties in the _ARM Envelope_. Standard features configured in the envelope include:
+In addition to the resource-specific property bag, a resource may configure one or more standard ARM features through the use of standard properties in the _ARM Envelope_. Standard features configured in the envelope include:
 
 - **Managed Identity**: Associating a managed identity with the resource to authorize actions taken by this resource on other resources.
 - **SKU**: A standard mechanism for configuring levels of service for a resource.
 - **Plan**: A standard mechanism for configuring MarketPlace billing plans for a resource.
 - **ETags**: A standard mechanism for managing concurrent operations over the resource.
 - **ResourceKind**: A standard mechanism for specifying a type of user experience in the portal.
+- **ManagedBy**: A standard mechanism for indicating that another Azure resource manages this resource.
+- **Extended Location**: A standard mechanism for placing a resource in an extended location such as an edge zone.
 
 ### Managed Identity
 
@@ -494,7 +496,7 @@ Standard configuration for ARM support of both SystemAssigned and UserAssigned M
 
 For more information, see [Managed Service Identity Support](https://eng.ms/docs/products/arm/rpaas/msisupport)
 
-### SKU
+### ResourceSkuProperty
 
 Standard support for setting a SKU-based service level for a resource. To enable SKU support, add the `ResourceSkuProperty` envelope property to the resource definition:
 
@@ -507,7 +509,7 @@ model Employee is TrackedResource<EmployeeProperties> {
 
 For more information, see [SKU Support](https://eng.ms/docs/products/arm/rpaas/skusupport)
 
-### ETags
+### EntityTagProperty
 
 Indicator that entity-tag operation concurrency support is enabled for this resource. To enable ETags, add the `EntityTagProperty` envelope property to the resource definition.
 
@@ -520,7 +522,7 @@ model Employee is TrackedResource<EmployeeProperties> {
 
 For more information, and limitations on RPaaS concurrency support, see [RPaaS ETag Support](https://eng.ms/docs/products/arm/rpaas/etags)
 
-### Plan
+### ResourcePlanProperty
 
 Support for marketplace billing configuration for the resource. To enable `Plan` support, add the `ResourcePlanProperty` standard envelope property to the resource definition.
 
@@ -533,7 +535,7 @@ model Employee is TrackedResource<EmployeeProperties> {
 
 See [MarketPlace Third Party Billing Support](https://eng.ms/docs/products/arm/rpaas/custom_billing)
 
-### ResourceKind
+### ResourceKindProperty
 
 Support for certain kinds of portal user experiences based on the kind of resource. To include 'Kind' in the resource definition, add the `ResourceKindProperty` standard envelope property.
 
@@ -546,7 +548,7 @@ model Employee is TrackedResource<EmployeeProperties> {
 
 For more information on user experiences in the Azure Portal, see [Portal Support](https://eng.ms/docs/products/arm/rpaas/portal/gettingstarted)
 
-### ManagedBy
+### ManagedByProperty
 
 Support for management of this resource by other resources. To add 'ManagedBy' support to the resource, add the `ManagedByProperty` envelope property to the resource definition:
 
@@ -558,6 +560,19 @@ model Employee is TrackedResource<EmployeeProperties> {
 ```
 
 For more information on supporting 'ManagedBy', see [ManagedBy API Contract](https://eng.ms/docs/products/arm/api_contracts/managedby)
+
+### ExtendedLocationProperty
+
+Support for deploying the resource into an ARM extended location. To add `extendedLocation` support to the resource, add the `ExtendedLocationProperty` envelope property to the resource definition:
+
+```typespec
+model Employee is TrackedResource<EmployeeProperties> {
+  ...ResourceNameParameter<Employee>;
+  ...ExtendedLocationProperty;
+}
+```
+
+The `extendedLocation` property is createable and returned on reads for resources that support extended locations.
 
 ## Reference
 
