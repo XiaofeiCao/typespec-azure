@@ -2,7 +2,7 @@
 title: no-empty-model
 ---
 
-```text title=- Full name-
+```text title="Full name"
 @azure-tools/typespec-azure-resource-manager/no-empty-model
 ```
 

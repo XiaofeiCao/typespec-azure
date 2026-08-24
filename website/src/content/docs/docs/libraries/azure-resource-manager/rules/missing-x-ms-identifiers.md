@@ -2,7 +2,7 @@
 title: missing-x-ms-identifiers
 ---
 
-```text title=- Full name-
+```text title="Full name"
 @azure-tools/typespec-azure-resource-manager/missing-x-ms-identifiers
 ```
 

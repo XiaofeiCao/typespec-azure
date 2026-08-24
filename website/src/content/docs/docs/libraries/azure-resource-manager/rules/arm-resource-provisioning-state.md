@@ -2,7 +2,7 @@
 title: arm-resource-provisioning-state
 ---
 
-```text title=- Full name-
+```text title="Full name"
 @azure-tools/typespec-azure-resource-manager/arm-resource-provisioning-state
 ```
 

@@ -204,7 +204,7 @@ union ResourceProvisioningState {
  *
  * ```typespec
  * model FooProperties {
- *   // Only have standard Succeeded, Failed, Cancelled states
+ *   // Spread this model into resource property models that include provisioningState.
  *   ...DefaultProvisioningStateProperty,
  * }
  * ```
@@ -237,7 +237,7 @@ model ExtendedLocationProperty {
 alias ManagedServiceIdentity = ManagedServiceIdentityProperty;
 
 /**
- * Model representing the standard `ManagedServiceIdentity` envelope property for a resource.
+ * Model representing the standard `identity` envelope property for a resource.
  * Spread this model into a resource model if the resource supports both system-assigned and user-assigned managed identities.
  *
  * @example
@@ -258,7 +258,7 @@ model ManagedServiceIdentityProperty {
 #deprecated "Please change ManagedSystemAssignedIdentity to ManagedSystemAssignedIdentityProperty."
 alias ManagedSystemAssignedIdentity = ManagedSystemAssignedIdentityProperty;
 /**
- * Model representing the standard `SystemAssignedServiceIdentity` envelope property for a resource.
+ * Model representing the standard `identity` envelope property for a resource.
  * Spread this model into a resource model if the resource supports system-assigned managed identities
  * but does not support user-assigned managed identities.
  *
@@ -286,7 +286,7 @@ alias EntityTag = EntityTagProperty;
  *
  * ```typespec
  * model Foo is TrackedResource<FooProperties> {
- *   // Only have standard Succeeded, Failed, Cancelled states
+ *   // Spread this model into resources that support an eTag property.
  *   ...EntityTagProperty;
  * }
  * ```
@@ -309,7 +309,7 @@ alias ResourceKind = ResourceKindProperty;
  *
  * ```typespec
  * model Foo is TrackedResource<FooProperties> {
- *   // Only have standard Succeeded, Failed, Cancelled states
+ *   // Spread this model into resources that support a kind property.
  *   ...ResourceKindProperty;
  * }
  * ```
@@ -365,7 +365,7 @@ alias ResourcePlan = ResourcePlanProperty;
  *
  * ```typespec
  * model Foo is TrackedResource<FooProperties> {
- *   // Only have standard Succeeded, Failed, Cancelled states
+ *   // Spread this model into resources that support a plan property.
  *   ...ResourcePlanProperty;
  * }
  * ```
@@ -386,7 +386,7 @@ alias ResourceSku = ResourceSkuProperty;
  *
  * ```typespec
  * model Foo is TrackedResource<FooProperties> {
- *   // Only have standard Succeeded, Failed, Cancelled states
+ *   // Spread this model into resources that support a sku property.
  *   ...ResourceSkuProperty;
  * }
  * ```
@@ -407,7 +407,7 @@ alias ManagedBy = ManagedByProperty;
  *
  * ```typespec
  * model Foo is TrackedResource<FooProperties> {
- *   // Only have standard Succeeded, Failed, Cancelled states
+ *   // Spread this model into resources managed by another entity.
  *   ...ManagedByProperty;
  * }
  * ```
@@ -426,7 +426,7 @@ alias Encryption = EncryptionProperty;
  *
  * ```typespec
  * model Foo is TrackedResource<FooProperties> {
- *   ...Encryption;
+ *   ...EncryptionProperty;
  * }
  * ```
  */
@@ -443,7 +443,8 @@ model EncryptionProperty {
  * @example
  * ```typespec
  * model Foo is TrackedResource<FooProperties> {
- *  ...AvailabilityZonesProperty;
+ *   // Spread this model into resources that support availability zones.
+ *   ...AvailabilityZonesProperty;
  * }
  * ```
  */

@@ -2,7 +2,7 @@
 title: arm-resource-invalid-action-verb
 ---
 
-```text title=- Full name-
+```text title="Full name"
 @azure-tools/typespec-azure-resource-manager/arm-resource-invalid-action-verb
 ```
 

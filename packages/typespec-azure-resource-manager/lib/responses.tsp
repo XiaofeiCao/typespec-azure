@@ -242,7 +242,7 @@ model ArmLroLocationHeader<
  * @template StatusMonitor The type of the polling StatusMonitor when following the Azure-AsyncOperation url
  * @template FinalResult The type of the logical result when following the location header
  * @template PollingUrlValue The value type of the link to the status monitor
- * @template FinalUrlValue The value type fo the link to the final result
+ * @template FinalUrlValue The value type for the link to the final result
  *
  * @example
  * ```typespec

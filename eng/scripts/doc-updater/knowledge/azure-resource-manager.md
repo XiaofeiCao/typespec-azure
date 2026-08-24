@@ -15,6 +15,8 @@ The current (non-deprecated) envelope property spread models are:
 
 The deprecated aliases are defined in `lib/models.tsp` with `#deprecated` markers.
 
+For current docs and samples, show these spreads on the **resource model** itself. The resource property bag should keep RP-specific properties (and optional `provisioningState`) instead of holding envelope spreads.
+
 ## Resource Name Pattern
 
 Always use `...ResourceNameParameter<ModelName>` in resource model definitions instead of manual `@key/@segment/@visibility/@path name` patterns. The template auto-generates camelCased key names and pluralized segment names from the model name. Custom key/segment names can be overridden via `KeyName` and `SegmentName` template parameters.
@@ -95,8 +97,10 @@ The `@service` decorator should NOT include a `version` parameter (version comes
 
 ## Feedback Corrections Applied
 
-- `step03.md`: Use `...ResourceNameParameter<AddressResource, KeyName = "addressName", SegmentName = "addresses">` instead of manual `@key/@segment name` fields for child resources.
+- `step03.md` and `step05.md`: Use unsuffixed child resource names (`Address`, `AddressProperties`) and `...ResourceNameParameter<Address>` so the default key/segment names derive correctly without overrides.
 - `step04.md`: Use individual operation declarations (not `TrackedResourceOperations<User, UserProperties>`) in the interface example, with `ArmCustomPatchSync` for the update operation.
+- `step04.md`: The current async no-content action template name is `ArmResourceActionNoResponseContentAsync`, and the common identity parameter models are `ResourceInstanceParameters<T>` / `ResourceParentParameters<T>` (not `CommonResourceParameters`).
 - `step05.md`: Remove `version` from `@service` decorator; use `...ResourceNameParameter<User>` instead of manual key/segment/path.
 - `deprecation.tsp`: The ExtensionResourceBase deprecation message must say "Foundations.ExtensionResource" (not "ProxyResource").
 - `arm-legacy-operations-discourage` rule was removed from linter registration; its rule doc file and linter.md entry should not exist.
+- Several manual rule docs had malformed fenced-code titles (`title=- Full name-`); normalize them to `title="Full name"` when touching those files.

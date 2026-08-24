@@ -2,7 +2,7 @@
 title: no-response-body
 ---
 
-```text title=- Full name-
+```text title="Full name"
 @azure-tools/typespec-azure-resource-manager/no-response-body
 
 ```

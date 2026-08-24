@@ -46,8 +46,8 @@ model TrackedResourceWithOptionalLocation<
  *
  * ```typespec
  * model Foo is TrackedResource<FooProperties> {
- *   // Only have standard Succeeded, Failed, Cancelled states
- *   ...ETagProperty;
+ *   // Spread this model into resources that support an etag property.
+ *   ...EntityTagProperty;
  * }
  * ```
  */
@@ -99,7 +99,7 @@ model ResourceWithPathParameter {}
  *
  * ```typespec
  * model Foo is TrackedResource<FooProperties> {
- *   // Only have standard Succeeded, Failed, Cancelled states
+ *   // Spread this model into resources that support a kind property.
  *   ...PolymorphicResourceKindProperty;
  * }
  * ```
@@ -192,7 +192,7 @@ model DiscriminatedProxyResource<
 @Http.Private.includeInapplicableMetadataInPayload(false)
 model DiscriminatedExtensionResource<
   KindType extends string = string,
-  Description extends valueof string = "Polymorphic extension resource types can be created by aliasing this type using a specific property type."
+  Description extends valueof string = "Polymorphic extension resource types can be created by instantiating this type, using 'kind' as the discriminator property."
 > extends Foundations.ExtensionResource {
   ...PolymorphicResourceKindProperty<KindType>;
 }
