@@ -309,7 +309,9 @@ TCGC infers the body parameter type from TypeSpec HTTP lib type [`HttpOperationB
 
 TCGC creates the `Content-Type` header parameter for any operation with body parameter if it doesn't exist, and creates the `Accept` header parameter for any operation with response that contains body. TCGC also creates corresponding method parameters for the operation's upper layer method for each case.
 
-For request bodies with multiple content types, the `Content-Type` parameter is modeled as an enum with one value per content type. For responses with multiple content types, the `Accept` header parameter is modeled as a single constant whose value is a comma-joined string of all response content types. Structured content types (JSON, XML, `text/plain`) are sorted before unstructured ones. For example, if a response can return `image/png` or `application/json`, the `Accept` constant value is `"application/json, image/png"`.
+For request bodies with a single explicit content type, the `Content-Type` parameter is modeled as a constant. For request bodies with multiple content types, the `Content-Type` parameter is modeled as an enum with one value per content type. For unconstrained `File` request bodies, the TypeSpec HTTP library reports `*/*` as a marker rather than a concrete request content type, so TCGC keeps `Content-Type` as an optional string and sets its client default value to `application/octet-stream`.
+
+For responses with a single content type, the `Accept` header parameter is modeled as a constant. For responses with multiple content types, the `Accept` header parameter is modeled as a single constant whose value is a comma-joined string of all response content types. Structured content types (JSON, XML, `text/plain`) are sorted before unstructured ones. For example, if a response can return `image/png` or `application/json`, the `Accept` constant value is `"application/json, image/png"`.
 
 TCGC uses several ways to find an HTTP operation's parameter's corresponding method parameter or model property:
 

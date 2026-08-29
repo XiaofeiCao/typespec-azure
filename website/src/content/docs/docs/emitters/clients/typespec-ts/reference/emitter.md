@@ -281,3 +281,9 @@ By default, code generation uses the titles specified in the `@client` and `@ser
 **Type:** `boolean`
 
 Internal option for test.
+
+### `experimental-split-models-by-visibility`
+
+**Type:** `boolean`
+
+Whether to project request-body models to their write visibility (for example `WidgetCreate` or `WidgetCreateOrUpdate`) so read-only properties do not leak into input types. Defaults to `false`.
